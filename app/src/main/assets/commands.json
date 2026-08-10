@@ -1,0 +1,1021 @@
+[
+  {
+    "name": "ls",
+    "description": "List directory contents",
+    "flags": ["-la", "-l", "-a", "-h", "-R", "--color"],
+    "category": "filesystem"
+  },
+  {
+    "name": "cd",
+    "description": "Change directory",
+    "flags": ["~", "-", ".."],
+    "category": "filesystem"
+  },
+  {
+    "name": "pwd",
+    "description": "Print working directory",
+    "flags": [],
+    "category": "filesystem"
+  },
+  {
+    "name": "mkdir",
+    "description": "Create directory",
+    "flags": ["-p", "-v", "-m"],
+    "category": "filesystem"
+  },
+  {
+    "name": "rm",
+    "description": "Remove files or directories",
+    "flags": ["-r", "-f", "-rf", "-v"],
+    "category": "filesystem"
+  },
+  {
+    "name": "cp",
+    "description": "Copy files or directories",
+    "flags": ["-r", "-v", "-i", "-a"],
+    "category": "filesystem"
+  },
+  {
+    "name": "mv",
+    "description": "Move/rename files or directories",
+    "flags": ["-v", "-i", "-n"],
+    "category": "filesystem"
+  },
+  {
+    "name": "cat",
+    "description": "Concatenate and display files",
+    "flags": ["-n", "-b", "-s"],
+    "category": "filesystem"
+  },
+  {
+    "name": "less",
+    "description": "View file contents page by page",
+    "flags": ["-N", "-R", "-S"],
+    "category": "filesystem"
+  },
+  {
+    "name": "head",
+    "description": "Output first part of files",
+    "flags": ["-n", "-c", "-q"],
+    "category": "filesystem"
+  },
+  {
+    "name": "tail",
+    "description": "Output last part of files",
+    "flags": ["-n", "-f", "-c"],
+    "category": "filesystem"
+  },
+  {
+    "name": "find",
+    "description": "Search for files in directory hierarchy",
+    "flags": ["-name", "-type", "-size", "-mtime", "-exec"],
+    "category": "filesystem"
+  },
+  {
+    "name": "grep",
+    "description": "Search text using patterns",
+    "flags": ["-r", "-i", "-n", "-l", "-v", "-E", "-c"],
+    "category": "filesystem"
+  },
+  {
+    "name": "chmod",
+    "description": "Change file permissions",
+    "flags": ["+x", "-R", "755", "644", "777"],
+    "category": "filesystem"
+  },
+  {
+    "name": "chown",
+    "description": "Change file owner",
+    "flags": ["-R", ":", "root"],
+    "category": "filesystem"
+  },
+  {
+    "name": "ln",
+    "description": "Create links between files",
+    "flags": ["-s", "-f", "-v"],
+    "category": "filesystem"
+  },
+  {
+    "name": "tar",
+    "description": "Archive files",
+    "flags": ["-czf", "-xzf", "-tzf", "-cvf", "-xvf"],
+    "category": "filesystem"
+  },
+  {
+    "name": "zip",
+    "description": "Package and compress files",
+    "flags": ["-r", "-e", "-q", "-9"],
+    "category": "filesystem"
+  },
+  {
+    "name": "unzip",
+    "description": "Extract compressed files",
+    "flags": ["-l", "-o", "-d"],
+    "category": "filesystem"
+  },
+  {
+    "name": "wget",
+    "description": "Download files from the web",
+    "flags": ["-O", "-q", "-c", "--no-check-certificate"],
+    "category": "network"
+  },
+  {
+    "name": "curl",
+    "description": "Transfer data from/to server",
+    "flags": ["-O", "-L", "-s", "-o", "-X", "-H", "-d"],
+    "category": "network"
+  },
+  {
+    "name": "ssh",
+    "description": "Secure shell remote login",
+    "flags": ["-p", "-i", "-L", "-R", "-v"],
+    "category": "network"
+  },
+  {
+    "name": "scp",
+    "description": "Secure copy between hosts",
+    "flags": ["-r", "-P", "-i"],
+    "category": "network"
+  },
+  {
+    "name": "ping",
+    "description": "Send ICMP ECHO_REQUEST",
+    "flags": ["-c", "-i", "-s", "-t"],
+    "category": "network"
+  },
+  {
+    "name": "netstat",
+    "description": "Network statistics",
+    "flags": ["-tlnp", "-an", "-r"],
+    "category": "network"
+  },
+  {
+    "name": "ifconfig",
+    "description": "Configure network interface",
+    "flags": ["-a", "up", "down"],
+    "category": "network"
+  },
+  {
+    "name": "ip",
+    "description": "Show/manipulate routing and devices",
+    "flags": ["addr", "route", "link", "-s"],
+    "category": "network"
+  },
+  {
+    "name": "ps",
+    "description": "Report process status",
+    "flags": ["aux", "-ef", "-e", "-f"],
+    "category": "process"
+  },
+  {
+    "name": "top",
+    "description": "Display processes",
+    "flags": ["-n", "-b", "-i"],
+    "category": "process"
+  },
+  {
+    "name": "htop",
+    "description": "Interactive process viewer",
+    "flags": [],
+    "category": "process"
+  },
+  {
+    "name": "kill",
+    "description": "Send signal to process",
+    "flags": ["-9", "-15", "-l", "-HUP"],
+    "category": "process"
+  },
+  {
+    "name": "killall",
+    "description": "Kill processes by name",
+    "flags": ["-9", "-v", "-i"],
+    "category": "process"
+  },
+  {
+    "name": "bg",
+    "description": "Put job in background",
+    "flags": [],
+    "category": "process"
+  },
+  {
+    "name": "fg",
+    "description": "Bring job to foreground",
+    "flags": [],
+    "category": "process"
+  },
+  {
+    "name": "jobs",
+    "description": "List active jobs",
+    "flags": ["-l", "-p"],
+    "category": "process"
+  },
+  {
+    "name": "nohup",
+    "description": "Run command immune to hangups",
+    "flags": ["&"],
+    "category": "process"
+  },
+  {
+    "name": "df",
+    "description": "Report filesystem disk space",
+    "flags": ["-h", "-T", "-i"],
+    "category": "system"
+  },
+  {
+    "name": "du",
+    "description": "Estimate file space usage",
+    "flags": ["-sh", "-h", "-c", "-d"],
+    "category": "system"
+  },
+  {
+    "name": "free",
+    "description": "Display memory usage",
+    "flags": ["-h", "-m", "-g"],
+    "category": "system"
+  },
+  {
+    "name": "uname",
+    "description": "Print system information",
+    "flags": ["-a", "-r", "-m"],
+    "category": "system"
+  },
+  {
+    "name": "uptime",
+    "description": "Show how long system has been running",
+    "flags": [],
+    "category": "system"
+  },
+  {
+    "name": "whoami",
+    "description": "Print effective user ID",
+    "flags": [],
+    "category": "system"
+  },
+  {
+    "name": "date",
+    "description": "Display/set system date",
+    "flags": ["+%Y-%m-%d", "+%H:%M:%S", "-d"],
+    "category": "system"
+  },
+  {
+    "name": "cal",
+    "description": "Display calendar",
+    "flags": ["-3", "-y", "-m"],
+    "category": "system"
+  },
+  {
+    "name": "termux-info",
+    "description": "Show Termux system info",
+    "flags": [],
+    "category": "termux"
+  },
+  {
+    "name": "termux-setup-storage",
+    "description": "Setup storage access",
+    "flags": [],
+    "category": "termux"
+  },
+  {
+    "name": "termux-open",
+    "description": "Open a file or URL",
+    "flags": ["--chooser", "--content"],
+    "category": "termux"
+  },
+  {
+    "name": "termux-open-url",
+    "description": "Open URL in browser",
+    "flags": [],
+    "category": "termux"
+  },
+  {
+    "name": "termux-tts-speak",
+    "description": "Text to speech",
+    "flags": ["-l", "-r", "-p"],
+    "category": "termux"
+  },
+  {
+    "name": "termux-toast",
+    "description": "Show toast message",
+    "flags": ["-s", "-b", "-g"],
+    "category": "termux"
+  },
+  {
+    "name": "termux-vibrate",
+    "description": "Vibrate device",
+    "flags": ["-d", "-f"],
+    "category": "termux"
+  },
+  {
+    "name": "termux-wake-lock",
+    "description": "Prevent device from sleeping",
+    "flags": [],
+    "category": "termux"
+  },
+  {
+    "name": "termix-wake-unlock",
+    "description": "Allow device to sleep",
+    "flags": [],
+    "category": "termux"
+  },
+  {
+    "name": "pkg",
+    "description": "Package manager",
+    "flags": [
+      "install",
+      "remove",
+      "search",
+      "list-installed",
+      "upgrade",
+      "show"
+    ],
+    "category": "termux"
+  },
+  {
+    "name": "apt",
+    "description": "Advanced package tool",
+    "flags": [
+      "install",
+      "remove",
+      "update",
+      "upgrade",
+      "search",
+      "show",
+      "autoremove"
+    ],
+    "category": "termux"
+  },
+  {
+    "name": "dpkg",
+    "description": "Debian package manager",
+    "flags": ["-i", "-r", "-l", "-L", "-s"],
+    "category": "termux"
+  },
+  {
+    "name": "git",
+    "description": "Version control system",
+    "flags": [
+      "clone",
+      "pull",
+      "push",
+      "commit",
+      "status",
+      "log",
+      "branch",
+      "checkout",
+      "add",
+      "diff",
+      "init",
+      "remote",
+      "merge",
+      "stash"
+    ],
+    "category": "development"
+  },
+  {
+    "name": "python",
+    "description": "Python interpreter",
+    "flags": ["-c", "-m", "-V", "-i"],
+    "category": "development"
+  },
+  {
+    "name": "python3",
+    "description": "Python 3 interpreter",
+    "flags": ["-c", "-m", "-V", "-i"],
+    "category": "development"
+  },
+  {
+    "name": "node",
+    "description": "Node.js runtime",
+    "flags": ["-v", "-e", "-i", "--version"],
+    "category": "development"
+  },
+  {
+    "name": "npm",
+    "description": "Node package manager",
+    "flags": [
+      "install",
+      "uninstall",
+      "start",
+      "run",
+      "test",
+      "list",
+      "update",
+      "init"
+    ],
+    "category": "development"
+  },
+  {
+    "name": "javac",
+    "description": "Java compiler",
+    "flags": ["-d", "-cp", "-sourcepath"],
+    "category": "development"
+  },
+  {
+    "name": "java",
+    "description": "Java runtime",
+    "flags": ["-jar", "-cp", "-version"],
+    "category": "development"
+  },
+  {
+    "name": "gcc",
+    "description": "GNU C compiler",
+    "flags": ["-o", "-Wall", "-g", "-c", "-l"],
+    "category": "development"
+  },
+  {
+    "name": "g++",
+    "description": "GNU C++ compiler",
+    "flags": ["-o", "-Wall", "-g", "-std=c++17"],
+    "category": "development"
+  },
+  {
+    "name": "make",
+    "description": "Build automation tool",
+    "flags": ["-j", "-C", "clean", "all", "install"],
+    "category": "development"
+  },
+  {
+    "name": "cmake",
+    "description": "Cross-platform make",
+    "flags": ["-B", "-S", "-DCMAKE_BUILD_TYPE="],
+    "category": "development"
+  },
+  {
+    "name": "vim",
+    "description": "Vi improved text editor",
+    "flags": ["-R", "-c", "+", "-u"],
+    "category": "development"
+  },
+  {
+    "name": "nano",
+    "description": "Simple text editor",
+    "flags": ["-l", "-v", "-w"],
+    "category": "development"
+  },
+  {
+    "name": "emacs",
+    "description": "GNU Emacs editor",
+    "flags": ["-nw", "-q", "--eval"],
+    "category": "development"
+  },
+  {
+    "name": "code",
+    "description": "VS Code (if installed)",
+    "flags": ["-n", "-g", "-r", "--version"],
+    "category": "development"
+  },
+  {
+    "name": "docker",
+    "description": "Container management",
+    "flags": [
+      "run",
+      "ps",
+      "build",
+      "pull",
+      "images",
+      "exec",
+      "stop",
+      "rm",
+      "rmi"
+    ],
+    "category": "development"
+  },
+  {
+    "name": "nmap",
+    "description": "Network exploration tool",
+    "flags": ["-sV", "-sC", "-A", "-p", "-sS", "-sU", "-O"],
+    "category": "network"
+  },
+  {
+    "name": "openssl",
+    "description": "SSL/TLS toolkit",
+    "flags": ["s_client", "x509", "req", "genrsa", "rsa", "enc", "dgst"],
+    "category": "security"
+  },
+  {
+    "name": "hydra",
+    "description": "Network login cracker",
+    "flags": ["-l", "-P", "-t", "-s", "-vV"],
+    "category": "security"
+  },
+  {
+    "name": "sqlmap",
+    "description": "SQL injection tool",
+    "flags": ["-u", "--dbs", "--tables", "--dump", "--batch"],
+    "category": "security"
+  },
+  {
+    "name": "echo",
+    "description": "Display a line of text",
+    "flags": ["-e", "-n"],
+    "category": "shell"
+  },
+  {
+    "name": "printf",
+    "description": "Format and print data",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "read",
+    "description": "Read from standard input",
+    "flags": ["-p", "-s", "-n", "-t"],
+    "category": "shell"
+  },
+  {
+    "name": "export",
+    "description": "Set environment variables",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "source",
+    "description": "Execute commands from file",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "alias",
+    "description": "Create command aliases",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "unalias",
+    "description": "Remove aliases",
+    "flags": ["-a"],
+    "category": "shell"
+  },
+  {
+    "name": "which",
+    "description": "Locate a command",
+    "flags": ["-a"],
+    "category": "shell"
+  },
+  {
+    "name": "whereis",
+    "description": "Locate binary/source/man",
+    "flags": ["-b", "-m", "-s"],
+    "category": "shell"
+  },
+  {
+    "name": "type",
+    "description": "Describe a command",
+    "flags": ["-a", "-t", "-p"],
+    "category": "shell"
+  },
+  {
+    "name": "test",
+    "description": "Check file types and compare",
+    "flags": ["-f", "-d", "-e", "-r", "-w", "-x", "-s", "-z", "-n"],
+    "category": "shell"
+  },
+  {
+    "name": "sleep",
+    "description": "Delay for specified time",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "wait",
+    "description": "Wait for process to complete",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "exit",
+    "description": "Exit the shell",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "clear",
+    "description": "Clear terminal screen",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "history",
+    "description": "Show command history",
+    "flags": ["-c", "-d", "-w", "-r"],
+    "category": "shell"
+  },
+  {
+    "name": "man",
+    "description": "Manual pager",
+    "flags": ["-k", "-f"],
+    "category": "shell"
+  },
+  {
+    "name": "info",
+    "description": "Read info documents",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "whatis",
+    "description": "Display manual descriptions",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "xargs",
+    "description": "Build and execute commands",
+    "flags": ["-I", "-n", "-P", "-0", "-d"],
+    "category": "shell"
+  },
+  {
+    "name": "tee",
+    "description": "Redirect output to multiple files",
+    "flags": ["-a", "-i"],
+    "category": "shell"
+  },
+  {
+    "name": "sed",
+    "description": "Stream editor",
+    "flags": ["-i", "-e", "-n", "-r"],
+    "category": "shell"
+  },
+  {
+    "name": "awk",
+    "description": "Pattern scanning language",
+    "flags": ["-F", "-v", "{"],
+    "category": "shell"
+  },
+  {
+    "name": "sort",
+    "description": "Sort lines of text",
+    "flags": ["-r", "-n", "-u", "-k", "-t"],
+    "category": "shell"
+  },
+  {
+    "name": "uniq",
+    "description": "Report or omit repeated lines",
+    "flags": ["-c", "-d", "-u", "-i"],
+    "category": "shell"
+  },
+  {
+    "name": "wc",
+    "description": "Word/line/char count",
+    "flags": ["-l", "-w", "-c", "-m"],
+    "category": "shell"
+  },
+  {
+    "name": "cut",
+    "description": "Remove sections from lines",
+    "flags": ["-d", "-f", "-c", "-s"],
+    "category": "shell"
+  },
+  {
+    "name": "tr",
+    "description": "Translate characters",
+    "flags": ["-d", "-s", "-c"],
+    "category": "shell"
+  },
+  {
+    "name": "diff",
+    "description": "Compare files line by line",
+    "flags": ["-u", "-r", "-y", "-i", "-w"],
+    "category": "shell"
+  },
+  {
+    "name": "patch",
+    "description": "Apply diff files",
+    "flags": ["-p", "-i", "-R", "-N"],
+    "category": "shell"
+  },
+  {
+    "name": "comm",
+    "description": "Compare sorted files",
+    "flags": ["-1", "-2", "-3"],
+    "category": "shell"
+  },
+  {
+    "name": "join",
+    "description": "Join lines on a field",
+    "flags": ["-t", "-1", "-2", "-o"],
+    "category": "shell"
+  },
+  {
+    "name": "split",
+    "description": "Split file into pieces",
+    "flags": ["-l", "-b", "-n", "-d"],
+    "category": "shell"
+  },
+  {
+    "name": "csplit",
+    "description": "Split by context",
+    "flags": ["-f", "-n", "-k", "-s"],
+    "category": "shell"
+  },
+  {
+    "name": "seq",
+    "description": "Print sequence of numbers",
+    "flags": ["-s", "-w"],
+    "category": "shell"
+  },
+  {
+    "name": "yes",
+    "description": "Output string repeatedly",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "true",
+    "description": "Return success",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "false",
+    "description": "Return failure",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "env",
+    "description": "Show/set environment",
+    "flags": ["-i", "-u"],
+    "category": "shell"
+  },
+  {
+    "name": "printenv",
+    "description": "Print environment",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "set",
+    "description": "Set shell options",
+    "flags": ["-x", "-e", "-u", "-o"],
+    "category": "shell"
+  },
+  {
+    "name": "unset",
+    "description": "Unset variables/functions",
+    "flags": ["-f", "-v"],
+    "category": "shell"
+  },
+  {
+    "name": "shopt",
+    "description": "Shell options",
+    "flags": ["-s", "-u", "-o", "-q"],
+    "category": "shell"
+  },
+  {
+    "name": "bind",
+    "description": "Readline key bindings",
+    "flags": ["-P", "-p", "-f", "-q", "-u", "-r", "-l"],
+    "category": "shell"
+  },
+  {
+    "name": "complete",
+    "description": "Specify how args completed",
+    "flags": ["-A", "-G", "-W", "-F", "-C", "-p", "-r", "-D", "-E"],
+    "category": "shell"
+  },
+  {
+    "name": "compgen",
+    "description": "Display possible completions",
+    "flags": [
+      "-a",
+      "-b",
+      "-c",
+      "-d",
+      "-e",
+      "-f",
+      "-g",
+      "-j",
+      "-k",
+      "-s",
+      "-u",
+      "-v",
+      "-o"
+    ],
+    "category": "shell"
+  },
+  {
+    "name": "getopts",
+    "description": "Parse positional parameters",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "hash",
+    "description": "Remember command locations",
+    "flags": ["-r", "-l", "-p", "-d", "-t"],
+    "category": "shell"
+  },
+  {
+    "name": "help",
+    "description": "Display help for builtin",
+    "flags": ["-d", "-m", "-s"],
+    "category": "shell"
+  },
+  {
+    "name": "let",
+    "description": "Evaluate arithmetic",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "local",
+    "description": "Create local variable",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "logout",
+    "description": "Exit login shell",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "mapfile",
+    "description": "Read lines into array",
+    "flags": ["-n", "-O", "-s", "-t", "-u", "-C", "-c"],
+    "category": "shell"
+  },
+  {
+    "name": "readarray",
+    "description": "Read lines into array",
+    "flags": ["-n", "-O", "-s", "-t", "-u", "-C", "-c"],
+    "category": "shell"
+  },
+  {
+    "name": "readonly",
+    "description": "Mark variables read-only",
+    "flags": ["-a", "-A", "-f", "-p", "-r"],
+    "category": "shell"
+  },
+  {
+    "name": "times",
+    "description": "Display shell times",
+    "flags": [],
+    "category": "shell"
+  },
+  {
+    "name": "trap",
+    "description": "Trap signals",
+    "flags": ["-l", "-p"],
+    "category": "shell"
+  },
+  {
+    "name": "type",
+    "description": "Describe command type",
+    "flags": ["-a", "-t", "-p", "-f", "-P", "-f"],
+    "category": "shell"
+  },
+  {
+    "name": "ulimit",
+    "description": "Set/show resource limits",
+    "flags": ["-a", "-c", "-d", "-f", "-m", "-n", "-s", "-t", "-v"],
+    "category": "shell"
+  },
+  {
+    "name": "umask",
+    "description": "Set file creation mask",
+    "flags": ["-S", "-p"],
+    "category": "shell"
+  },
+  {
+    "name": "pip",
+    "description": "Python package installer",
+    "flags": ["install", "uninstall", "list", "show", "freeze", "search"],
+    "category": "development"
+  },
+  {
+    "name": "pip3",
+    "description": "Python 3 package installer",
+    "flags": ["install", "uninstall", "list", "show", "freeze", "search"],
+    "category": "development"
+  },
+  {
+    "name": "composer",
+    "description": "PHP dependency manager",
+    "flags": ["install", "update", "require", "remove", "dump-autoload"],
+    "category": "development"
+  },
+  {
+    "name": "cargo",
+    "description": "Rust package manager",
+    "flags": [
+      "build",
+      "run",
+      "test",
+      "check",
+      "new",
+      "update",
+      "doc",
+      "publish"
+    ],
+    "category": "development"
+  },
+  {
+    "name": "go",
+    "description": "Go programming language",
+    "flags": ["build", "run", "test", "get", "install", "fmt", "vet", "mod"],
+    "category": "development"
+  },
+  {
+    "name": "ruby",
+    "description": "Ruby interpreter",
+    "flags": ["-v", "-e", "-r", "-I"],
+    "category": "development"
+  },
+  {
+    "name": "perl",
+    "description": "Perl interpreter",
+    "flags": ["-e", "-v", "-w", "-c"],
+    "category": "development"
+  },
+  {
+    "name": "lua",
+    "description": "Lua interpreter",
+    "flags": ["-v", "-e", "-i", "-l"],
+    "category": "development"
+  },
+  {
+    "name": "sqlite3",
+    "description": "SQLite database CLI",
+    "flags": [".tables", ".schema", ".dump", ".mode", ".headers", ".output"],
+    "category": "development"
+  },
+  {
+    "name": "mysql",
+    "description": "MySQL client",
+    "flags": ["-u", "-p", "-h", "-e", "-D"],
+    "category": "development"
+  },
+  {
+    "name": "postgres",
+    "description": "PostgreSQL client",
+    "flags": ["-U", "-h", "-d", "-c", "-f"],
+    "category": "development"
+  },
+  {
+    "name": "redis-cli",
+    "description": "Redis client",
+    "flags": ["-h", "-p", "-a", "-n"],
+    "category": "development"
+  },
+  {
+    "name": "jq",
+    "description": "JSON processor",
+    "flags": ["-r", "-c", "-M", "-S", "."],
+    "category": "development"
+  },
+  {
+    "name": "yq",
+    "description": "YAML processor",
+    "flags": ["-y", "-o", "-P", "."],
+    "category": "development"
+  },
+  {
+    "name": "ffmpeg",
+    "description": "Multimedia framework",
+    "flags": ["-i", "-c:v", "-c:a", "-b:v", "-b:a", "-r", "-s", "-vf", "-af"],
+    "category": "media"
+  },
+  {
+    "name": "imagemagick",
+    "description": "Image manipulation",
+    "flags": ["convert", "identify", "mogrify", "composite"],
+    "category": "media"
+  },
+  {
+    "name": "termux-api",
+    "description": "Termux API commands",
+    "flags": [
+      "battery-status",
+      "camera-info",
+      "clipboard-get",
+      "clipboard-set",
+      "contact-list",
+      "dialog",
+      "download",
+      "fingerprint",
+      "infrared-ftransmit",
+      "location",
+      "notification",
+      "notification-remove",
+      "sensor",
+      "share",
+      "sms-list",
+      "telephony-call",
+      "telephony-cellinfo",
+      "telephony-deviceinfo",
+      "toast",
+      "torch",
+      "tts-engines",
+      "tts-speak",
+      "usb",
+      "vibrate",
+      "volume",
+      "wallpaper",
+      "wifi-connectioninfo",
+      "wifi-scaninfo"
+    ],
+    "category": "termux"
+  }
+]
