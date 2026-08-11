@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,10 @@ class TermuxCommandExecutor @Inject constructor(
         fun deliverResult(id: Int, stdout: String, stderr: String, exitCode: Int) {
             callbacks.remove(id)?.invoke(stdout, stderr, exitCode)
         }
+
+        fun getDownloadDir(): File {
+            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        }
     }
 
     fun isTermuxInstalled() = try {
@@ -46,6 +52,14 @@ class TermuxCommandExecutor @Inject constructor(
         context.checkSelfPermission("com.termux.permission.RUN_COMMAND") ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
 
+    fun canReadSharedStorage(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager()
+        }
+        return context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
     suspend fun executeWithResult(
         command: String,
         workdir: String = "/data/data/com.termux/files/home",
@@ -53,34 +67,53 @@ class TermuxCommandExecutor @Inject constructor(
     ) {
         val id = nextId++
         registerCallback(id, callback)
-        val resultFile = "/sdcard/Download/tc-out-$id.txt"
-        val doneFile = "/sdcard/Download/tc-done-$id.txt"
 
-        // Also try PendingIntent (may or may not work)
-        sendToTermuxWithPI(command, workdir, id)
+        // Also try PendingIntent as a faster path
+        val downloadDir = getDownloadDir()
+        downloadDir.mkdirs()
+        val resultFile = File(downloadDir, "tc-out-$id.txt")
+        val doneFile = File(downloadDir, "tc-done-$id.txt")
+
+        // Wrap command: write stdout+stderr to resultFile, exit code to doneFile
+        val wrapped = "{ $command; } > \"${resultFile.absolutePath}\" 2>&1; echo \$? > \"${doneFile.absolutePath}\""
+        sendToTermuxWithPI(command, workdir, id) // try PI with original command
+        sendToTermux(wrapped, workdir)            // actual: file-based via wrapped command
+
+        Log.d(TAG, "Command #$id wrapped to: $wrapped")
+        Log.d(TAG, "Polling for: ${resultFile.absolutePath}")
 
         // Primary: file-based polling via shared storage
         withContext(Dispatchers.IO) {
+            Log.d(TAG, "Polling for results in: ${downloadDir.absolutePath}")
+
             for (attempt in 1..20) {
                 delay(500)
                 try {
-                    val done = File(doneFile)
-                    if (done.exists()) {
-                        val exitCode = done.readText().trim().toIntOrNull() ?: -1
-                        val result = File(resultFile)
-                        if (result.exists()) {
-                            val stdout = result.readText()
-                            result.delete()
-                            done.delete()
+                    if (doneFile.exists()) {
+                        val exitCode = doneFile.readText().trim().toIntOrNull() ?: -1
+                        if (resultFile.exists()) {
+                            val stdout = resultFile.readText()
+                            resultFile.delete()
+                            doneFile.delete()
+                            Log.d(TAG, "Got result for #$id: ${stdout.take(80)}")
                             withContext(Dispatchers.Main) { callback(stdout, "", exitCode) }
                             callbacks.remove(id)
                             return@withContext
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Poll error for #$id: ${e.message}")
+                }
             }
-            // Timeout
-            withContext(Dispatchers.Main) { callback("", "Timeout: no result from Termux after 10s", -1) }
+            Log.w(TAG, "Timeout for #$id")
+            val hint = if (!canReadSharedStorage()) {
+                "Storage permission needed. On Android 11+: Settings > Apps > Termux Companion > 'All files access'"
+            } else {
+                "Check: 1) 'termux-setup-storage' run in Termux? 2) File at ${resultFile.absolutePath} exists?"
+            }
+            withContext(Dispatchers.Main) {
+                callback("", "Timeout: no result from Termux after 10s.\n\n$hint", -1)
+            }
             callbacks.remove(id)
         }
     }

@@ -1,5 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
-</adaptive-icon>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Terminal screen -->
+    <path
+        android:fillColor="#1E1E2E"
+        android:pathData="M24,24 L84,24 C86.2,24 88,25.8 88,28 L88,80 C88,82.2 86.2,84 84,84 L24,84 C21.8,84 20,82.2 20,80 L20,28 C20,25.8 21.8,24 24,24 Z" />
+    <!-- Screen glare -->
+    <path
+        android:fillColor="#2D2D44"
+        android:pathData="M24,24 L84,24 C86.2,24 88,25.8 88,28 L88,44 L20,44 L20,28 C20,25.8 21.8,24 24,24 Z" />
+    <!-- Terminal prompt > -->
+    <path
+        android:fillColor="#00FF88"
+        android:pathData="M36,56 L44,62 L36,68"
+        android:strokeWidth="3.5"
+        android:strokeColor="#00FF88"
+        android:fillAlpha="0" />
+    <!-- Cursor line -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,55 L64,55 L64,58 L48,58 Z"
+        android:strokeWidth="0" />
+    <!-- Second prompt line >_ -->
+    <path
+        android:fillColor="#00CC66"
+        android:pathData="M36,72 L44,78 L36,84"
+        android:strokeWidth="3"
+        android:strokeColor="#00CC66"
+        android:fillAlpha="0" />
+    <!-- Underscore -->
+    <path
+        android:fillColor="#00FF88"
+        android:pathData="M48,78 L54,78 L54,80 L48,80 Z" />
+    <!-- Top bar dots -->
+    <path
+        android:fillColor="#FF5F57"
+        android:pathData="M30,16 A3,3 0 1 1 36,16 A3,3 0 1 1 30,16 Z" />
+    <path
+        android:fillColor="#FEBC2E"
+        android:pathData="M40,16 A3,3 0 1 1 46,16 A3,3 0 1 1 40,16 Z" />
+    <path
+        android:fillColor="#28C840"
+        android:pathData="M50,16 A3,3 0 1 1 56,16 A3,3 0 1 1 50,16 Z" />
+</vector>
