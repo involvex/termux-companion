@@ -175,17 +175,18 @@ class TerminalViewModel @Inject constructor(
 
             _suggestions.value = results.distinctBy { it.text }.take(10)
 
-            if (settings.aiSuggestions && partial.length >= 3) {
-                aiJob = launch {
-                    delay(300)
-                    val aiResults = aiSuggestionService.getSuggestions(
-                        partial = partial,
-                        apiEndpoint = settings.zenApiEndpoint,
-                        apiKey = settings.zenApiKey
-                    )
-                    _suggestions.value = (_suggestions.value + aiResults).distinctBy { it.text }.take(10)
-                }
-            }
+             if (settings.aiSuggestions && partial.length >= 3) {
+                 aiJob = launch {
+                     delay(300)
+                     val aiResults = aiSuggestionService.getSuggestions(
+                         partial = partial,
+                         apiEndpoint = settings.zenApiEndpoint,
+                         apiKey = settings.zenApiKey,
+                         model = settings.aiModel
+                     )
+                     _suggestions.value = (_suggestions.value + aiResults).distinctBy { it.text }.take(10)
+                 }
+             }
         }
     }
 

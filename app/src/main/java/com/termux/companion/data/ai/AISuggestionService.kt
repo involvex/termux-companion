@@ -29,13 +29,14 @@ class AISuggestionService @Inject constructor() {
     suspend fun getSuggestions(
         partial: String,
         apiEndpoint: String,
-        apiKey: String
+        apiKey: String,
+        model: String
     ): List<AutocompleteSuggestion> = withContext(Dispatchers.IO) {
         if (apiKey.isBlank() || partial.length < 3) return@withContext emptyList()
 
         try {
             val prompt = buildPrompt(partial)
-            val requestBody = buildRequestBody(prompt)
+            val requestBody = buildRequestBody(prompt, model)
 
             val request = Request.Builder()
                 .url(apiEndpoint)
@@ -61,10 +62,10 @@ Example: [{"command": "ls -la", "description": "List all files with details"}]
 Keep suggestions practical and relevant to Linux/Termux commands."""
     }
 
-    private fun buildRequestBody(prompt: String): okhttp3.RequestBody {
+    private fun buildRequestBody(prompt: String, model: String): okhttp3.RequestBody {
         val json = """
         {
-            "model": "gpt-3.5-turbo",
+            "model": "$model",
             "messages": [
                 {"role": "system", "content": "You are a helpful terminal assistant. Provide concise command suggestions."},
                 {"role": "user", "content": "$prompt"}

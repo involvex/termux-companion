@@ -94,7 +94,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 SettingsSection(title = "AI Configuration") {
                     OutlinedTextField(
                         value = settings.zenApiEndpoint,
-                        onValueChange = viewModel::setZenApiEndpoint,
+                        onValueChange = { viewModel.setZenApiEndpoint(it) },
                         label = { Text("API Endpoint") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -105,7 +105,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = settings.zenApiKey,
-                        onValueChange = viewModel::setZenApiKey,
+                        onValueChange = { viewModel.setZenApiKey(it) },
                         label = { Text("API Key") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -115,6 +115,16 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = settings.aiModel,
+                        onValueChange = { viewModel.setAiModel(it) },
+                        label = { Text("AI Model") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                    )
                 }
             }
 

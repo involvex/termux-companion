@@ -46,4 +46,8 @@ class SettingsViewModel @Inject constructor(
     fun setZenApiEndpoint(endpoint: String) {
         viewModelScope.launch { settingsRepository.setZenApiEndpoint(endpoint) }
     }
+
+    fun setAiModel(model: String) {
+        viewModelScope.launch { settingsRepository.setAiModel(model) }
+    }
 }

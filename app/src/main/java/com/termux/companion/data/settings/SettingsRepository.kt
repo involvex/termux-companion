@@ -28,6 +28,7 @@ class SettingsRepository @Inject constructor(
         val AI_SUGGESTIONS = booleanPreferencesKey("ai_suggestions")
         val ZEN_API_KEY = stringPreferencesKey("zen_api_key")
         val ZEN_API_ENDPOINT = stringPreferencesKey("zen_api_endpoint")
+        val AI_MODEL = stringPreferencesKey("ai_model")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -38,7 +39,8 @@ class SettingsRepository @Inject constructor(
             historySuggestions = prefs[HISTORY_SUGGESTIONS] ?: true,
             aiSuggestions = prefs[AI_SUGGESTIONS] ?: false,
             zenApiKey = prefs[ZEN_API_KEY] ?: "",
-            zenApiEndpoint = prefs[ZEN_API_ENDPOINT] ?: "https://api.openai.com/v1/chat/completions"
+            zenApiEndpoint = prefs[ZEN_API_ENDPOINT] ?: "https://api.openai.com/v1/chat/completions",
+            aiModel = prefs[AI_MODEL] ?: "gpt-3.5-turbo"
         )
     }
 
@@ -68,5 +70,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setZenApiEndpoint(endpoint: String) {
         context.dataStore.edit { it[ZEN_API_ENDPOINT] = endpoint }
+    }
+
+    suspend fun setAiModel(model: String) {
+        context.dataStore.edit { it[AI_MODEL] = model }
     }
 }
