@@ -6,6 +6,7 @@ import com.termux.companion.data.ai.AISuggestionService
 import com.termux.companion.data.ai.CommandAutocomplete
 import com.termux.companion.data.db.AppDatabase
 import com.termux.companion.data.db.CommandHistoryDao
+import com.termux.companion.data.security.SecurityRepository
 import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.data.termux.TermuxDiagnosticsChecker
@@ -64,5 +65,15 @@ object AppModule {
     @Singleton
     fun provideTermuxDiagnosticsChecker(@ApplicationContext context: Context): TermuxDiagnosticsChecker {
         return TermuxDiagnosticsChecker(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSecurityRepository(
+        @ApplicationContext context: Context,
+        settingsRepository: SettingsRepository,
+        termuxCommandExecutor: TermuxCommandExecutor
+    ): SecurityRepository {
+        return SecurityRepository(context, settingsRepository, termuxCommandExecutor)
     }
 }

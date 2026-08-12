@@ -15,13 +15,18 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -33,6 +38,16 @@ import com.termux.companion.ui.components.ConnectedIndicator
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvent.collect { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -42,7 +57,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -134,6 +150,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 ListItem(
                     headlineContent = { Text("Termux Status") },
                     trailingContent = { ConnectedIndicator() }
+                )
+            }
+
+            HorizontalDivider()
+
+            SettingsSection(title = "Security") {
+                SwitchPreference(
+                    title = "Google Wallet / Security Mode",
+                    description = "Temporarily disables ADB, Accessibility services, and Shizuku to pass Play Integrity checks.",
+                    checked = settings.walletModeActive,
+                    onCheckedChange = viewModel::toggleWalletMode
                 )
             }
 

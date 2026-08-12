@@ -2,22 +2,29 @@ package com.termux.companion.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.termux.companion.data.security.SecurityRepository
 import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.domain.model.AppSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val securityRepository: SecurityRepository
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
+    private val _snackbarEvent = MutableSharedFlow<String>()
+    val snackbarEvent = _snackbarEvent.asSharedFlow()
 
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setDarkMode(enabled) }
@@ -49,5 +56,18 @@ class SettingsViewModel @Inject constructor(
 
     fun setAiModel(model: String) {
         viewModelScope.launch { settingsRepository.setAiModel(model) }
+    }
+
+    fun toggleWalletMode(enabled: Boolean) {
+        viewModelScope.launch {
+            securityRepository.setWalletMode(enabled)
+                .onFailure { e ->
+                    _snackbarEvent.emit(e.message ?: "Failed to toggle security mode")
+                }
+                .onSuccess {
+                    val message = if (enabled) "Security mode enabled" else "Dev mode restored"
+                    _snackbarEvent.emit(message)
+                }
+        }
     }
 }
