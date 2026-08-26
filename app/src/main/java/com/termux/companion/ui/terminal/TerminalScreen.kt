@@ -25,13 +25,16 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -83,6 +86,9 @@ private val TerminalFgColor = Color(0xFFE5E5E5L)
 @Composable
 fun TerminalScreen(
     onOpenHistory: () -> Unit = {},
+    onOpenDiagnostics: () -> Unit = {},
+    onOpenPackages: () -> Unit = {},
+    onOpenProcesses: () -> Unit = {},
     onOpenSnippets: () -> Unit = {},
     pendingCommand: String? = null,
     onPendingCommandConsumed: () -> Unit = {},
@@ -169,10 +175,34 @@ fun TerminalScreen(
                                 },
                                 leadingIcon = { Icon(Icons.Default.Code, null) }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Diagnostics") },
+                                onClick = {
+                                    onOpenDiagnostics()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Build, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Packages") },
+                                onClick = {
+                                    onOpenPackages()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Warning, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Processes") },
+                                onClick = {
+                                    onOpenProcesses()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Memory, null) }
+                            )
                         }
-                    }
                 }
-            )
+            }
+        )
         }
     ) { padding ->
         Column(

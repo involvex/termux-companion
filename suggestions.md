@@ -82,8 +82,8 @@ feature suggestions with impact/effort/confidence ratings.
 | FEAT-011 | ✅ Resolved | Reliability | **Persist terminal transcript & restore sessions** | `TranscriptEntity` + `TranscriptDao` (DB v4 / `MIGRATION_3_4`), persisted on `appendOutput()`, restored (last 200) in `init`, `clearTerminal` also clears DB. | Medium | Medium | 90% |
 | FEAT-012 | 🔶 In Progress | UX | **Real connection diagnostics surface** | Dedicated `DiagnosticsScreen` + `DiagnosticsViewModel` (`TermuxDiagnosticsChecker.check()` auto-runs on init, shows each check as pass/fail/skip with icon + label, version detail, expandable issues list with re-run button). Navigable from Settings ▸ Connection → "Open full diagnostics". Existing embedded section retained. | Medium | Low-Med | 90% |
 | FEAT-013 | 🔶 In Progress | Feature | **Package manager UI** | Dedicated `Packages` screen (`PkgScreen` + `PkgViewModel`). Runs `pkg list-installed` (shows name/version with uninstall action), `pkg search <q>` (shows results with install action). Both install and uninstall require confirmation dialog. Navigable as secondary route (route: `packages`). Progress streaming deferred. | Medium | Medium-High | 80% |
-| FEAT-014 | Open | Feature | **Process monitor** | Parse `ps -ef` into a list with CPU/MEM columns and kill action w/ confirm. Pairs with FEAT-013 as a "System" tab. | Medium | Medium | 80% |
-| FEAT-015 | Open | UX | **Explorer bookmarks & client-side filter** | No bookmarks, no filter box, no breadcrumbs. Also `FileExplorerScreen`'s default param `connectionState = ConnectionState.Connected` (`FileExplorerScreen.kt:78`) still masks real state — pass live state like Terminal does. | Medium | Low-Med | 90% |
+| FEAT-014 | ✅ Resolved | Feature | **Process monitor** | `ProcessScreen` + `ProcessViewModel` runs `ps -eo pid,user,%cpu,%mem,cmd` and offers kill-by-PID with confirmation. Route registered as `processes`; accessible from Terminal overflow menu. | Medium | Medium | 80% |
+| FEAT-015 | ✅ Resolved | UX | **Explorer bookmarks & connection state fix** | `BookmarkEntity` + `BookmarkDao` (Room DB v5 migration); `FileExplorerViewModel` injects `TermuxCommandExecutor` and derives `connectionState` live — no more masked default. `FileExplorerScreen` observes `viewModel.bookmarks` and renders a bookmarks header. | Medium | Low-Med | 90% |
 
 ---
 
@@ -102,8 +102,8 @@ feature suggestions with impact/effort/confidence ratings.
 
 ## Priority Reasoning
 
-- **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). FEAT-009 (snippets), FEAT-010 (ANSI colors), and FEAT-011 (transcript persist) completed 2026-08-26. FEAT-012 (diagnostics UI) and FEAT-013 (package manager UI) now in progress. All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FEAT-014 (process monitor) and FEAT-015 (explorer bookmarks + state fix) are next in queue. **All Medium-Priority features through FEAT-013 are now implemented as of 2026-08-26; FEAT-014+ are open.**
+- **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). FEAT-009 (snippets), FEAT-010 (ANSI colors), and FEAT-011 (transcript persist) completed 2026-08-26. FEAT-012 (diagnostics UI) and FEAT-013 (package manager UI) completed 2026-08-26. FEAT-014 (process monitor) and FEAT-015 (explorer bookmarks + state fix) now also shipped. Terminal overflow menu exposes Diagnostics/Packages/Processes as one-tap shortcuts.
+- **Next natural targets**: FEAT-018 onwards. **All Medium-Priority features through FEAT-015 are now implemented as of 2026-08-26.**
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 

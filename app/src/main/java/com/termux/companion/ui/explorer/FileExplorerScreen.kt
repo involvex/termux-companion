@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
@@ -34,6 +37,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -82,6 +86,8 @@ fun FileExplorerScreen(
     val files by viewModel.files.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
+    val bookmarks by viewModel.bookmarks.collectAsState()
     val clipboard by viewModel.clipboard.collectAsState()
     val isOperating by viewModel.isOperating.collectAsState()
     val propertiesText by viewModel.propertiesText.collectAsState()
@@ -187,12 +193,46 @@ fun FileExplorerScreen(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             Box(modifier = Modifier.weight(1f)) {
-                ConnectionStatusBar(
-                    state = connectionState,
-                    onActionClick = {}
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ConnectionStatusBar(
+                        state = connectionState,
+                        onActionClick = { viewModel.refreshConnectionState() }
+                    )
 
-                when {
+                    if (bookmarks.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            bookmarks.forEach { bm ->
+                                val label = if (bm.isDirectory) "📁 ${bm.name}" else "📄 ${bm.name}"
+                                FilterChip(
+                                    selected = currentPath == bm.path,
+                                    onClick = { viewModel.listDirectory(bm.path) },
+                                    label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+                                    trailingIcon = {
+                                        IconButton(
+                                            onClick = { viewModel.removeBookmark(bm.path) },
+                                            modifier = Modifier.size(16.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Remove bookmark",
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    when {
                     isLoading -> {
                         LoadingIndicator(message = "Loading files...")
                     }
@@ -237,6 +277,7 @@ fun FileExplorerScreen(
                             }
                         }
                     }
+}
                 }
             }
         }

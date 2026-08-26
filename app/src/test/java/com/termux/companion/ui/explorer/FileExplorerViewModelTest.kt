@@ -1,6 +1,8 @@
 package com.termux.companion.ui.explorer
 
 import com.termux.companion.data.termux.TermuxCommandRunner
+import com.termux.companion.data.db.BookmarkDao
+import com.termux.companion.data.db.BookmarkEntity
 import com.termux.companion.domain.model.CommandResult
 import com.termux.companion.domain.model.FileItem
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +59,13 @@ class FileExplorerViewModelTest {
         }
     }
 
+    private class FakeBookmarkDao : BookmarkDao {
+        override suspend fun insert(entity: BookmarkEntity) {}
+        override suspend fun getAll(): List<BookmarkEntity> = emptyList()
+        override suspend fun deleteByPath(path: String) {}
+        override suspend fun deleteById(id: Long) {}
+    }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -79,7 +88,7 @@ class FileExplorerViewModelTest {
     @Test
     fun rename_requestsConfirmation_whenTargetNameExists() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.rename(homeFile("a.txt"), "b.txt")
 
@@ -92,7 +101,7 @@ class FileExplorerViewModelTest {
     @Test
     fun confirmedRename_executesMove_andClearsRequest() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.rename(homeFile("a.txt"), "b.txt")
         val request = viewModel.pendingOverwrite.value!!
@@ -108,7 +117,7 @@ class FileExplorerViewModelTest {
     @Test
     fun dismissedOverwrite_cancelsRename_withoutExecuting() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.rename(homeFile("a.txt"), "b.txt")
         viewModel.dismissOverwrite()
@@ -120,7 +129,7 @@ class FileExplorerViewModelTest {
     @Test
     fun renameWithoutConflict_executesImmediately() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.rename(homeFile("a.txt"), "renamed.txt")
 
@@ -131,7 +140,7 @@ class FileExplorerViewModelTest {
     @Test
     fun renameToDotDot_isRejected_withoutAnyCommand() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.rename(homeFile("a.txt"), "..")
 
@@ -143,7 +152,7 @@ class FileExplorerViewModelTest {
     @Test
     fun pasteCut_requestsConfirmation_whenNameConflicts_andClearsClipboardAfterProceed() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.copyToClipboard(
             FileItem(name = "b.txt", path = "/sdcard/Download/b.txt", isDirectory = false),
@@ -165,7 +174,7 @@ class FileExplorerViewModelTest {
     @Test
     fun pasteCopy_withoutConflict_runsImmediately_andKeepsClipboard() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.copyToClipboard(
             FileItem(name = "z.txt", path = "/sdcard/Download/z.txt", isDirectory = false),
@@ -182,7 +191,7 @@ class FileExplorerViewModelTest {
     @Test
     fun createFolder_dotDot_rejected_withoutCommand() = runTest {
         val runner = FakeTermuxCommandRunner()
-        val viewModel = FileExplorerViewModel(runner)
+        val viewModel = FileExplorerViewModel(runner, FakeBookmarkDao())
 
         viewModel.createFolder("..")
 

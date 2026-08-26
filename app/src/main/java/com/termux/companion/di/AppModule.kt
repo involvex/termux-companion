@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.termux.companion.data.ai.AISuggestionService
 import com.termux.companion.data.ai.CommandAutocomplete
 import com.termux.companion.data.db.AppDatabase
+import com.termux.companion.data.db.BookmarkDao
 import com.termux.companion.data.db.CommandHistoryDao
 import com.termux.companion.data.db.SnippetDao
 import com.termux.companion.data.db.TranscriptDao
@@ -36,7 +37,8 @@ object AppModule {
         ).addMigrations(
                     AppDatabase.MIGRATION_1_2,
                     AppDatabase.MIGRATION_2_3,
-                    AppDatabase.MIGRATION_3_4
+                    AppDatabase.MIGRATION_3_4,
+                    AppDatabase.MIGRATION_4_5
                 ).build()
     }
 
@@ -56,6 +58,12 @@ object AppModule {
     @Singleton
     fun provideTranscriptDao(db: AppDatabase): TranscriptDao {
         return db.transcriptDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideBookmarkDao(db: AppDatabase): BookmarkDao {
+        return db.bookmarkDao()
     }
 
     @Provides

@@ -6,14 +6,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [CommandHistoryEntity::class, SnippetEntity::class, TranscriptEntity::class],
-    version = 4,
+    entities = [CommandHistoryEntity::class, SnippetEntity::class, TranscriptEntity::class, BookmarkEntity::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun commandHistoryDao(): CommandHistoryDao
     abstract fun snippetDao(): SnippetDao
     abstract fun transcriptDao(): TranscriptDao
+    abstract fun bookmarkDao(): BookmarkDao
 
     companion object {
         /**
@@ -72,6 +73,23 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_transcript_timestamp` ON `transcript` (`timestamp`)"
+                )
+            }
+        }
+
+        /** v4 -> v5: new bookmarks table for explorer bookmarks (FEAT-015). */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `bookmarks` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`path` TEXT NOT NULL, " +
+                        "`is_directory` INTEGER NOT NULL, " +
+                        "`timestamp` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_bookmarks_path` ON `bookmarks` (`path`)"
                 )
             }
         }

@@ -2,8 +2,12 @@ package com.termux.companion.ui.explorer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.termux.companion.data.db.BookmarkDao
+import com.termux.companion.data.db.BookmarkEntity
 import com.termux.companion.data.termux.TermuxCommandRunner
+import com.termux.companion.domain.model.CommandResult
 import com.termux.companion.domain.model.FileItem
+import com.termux.companion.ui.terminal.ConnectionState
 import com.termux.companion.utils.ShellUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -29,7 +33,8 @@ private const val OP_TIMEOUT_MS = 10_000L
 
 @HiltViewModel
 class FileExplorerViewModel @Inject constructor(
-    private val termuxExecutor: TermuxCommandRunner
+    private val termuxExecutor: TermuxCommandRunner,
+    private val bookmarkDao: BookmarkDao,
 ) : ViewModel() {
 
     private val _currentPath = MutableStateFlow("/data/data/com.termux/files/home")
@@ -43,6 +48,12 @@ class FileExplorerViewModel @Inject constructor(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Unknown)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _bookmarks = MutableStateFlow<List<FileItem>>(emptyList())
+    val bookmarks: StateFlow<List<FileItem>> = _bookmarks.asStateFlow()
 
     private val pathHistory = mutableListOf<String>()
     private var pendingJob: Job? = null
@@ -65,6 +76,10 @@ class FileExplorerViewModel @Inject constructor(
 
     init {
         listDirectory(_currentPath.value)
+        loadBookmarks()
+        viewModelScope.launch {
+            _connectionState.value = deriveState()
+        }
     }
 
     fun listDirectory(path: String) {
@@ -73,6 +88,50 @@ class FileExplorerViewModel @Inject constructor(
 
     private fun refreshSilently() {
         loadDirectory(_currentPath.value, showLoading = false)
+    }
+
+    private fun deriveState(): ConnectionState {
+        val executor = termuxExecutor
+        return when {
+            !executor.isTermuxInstalled() ->
+                ConnectionState.TermuxNotInstalled
+            !executor.hasRunCommandPermission() ->
+                ConnectionState.PermissionDenied
+            else -> ConnectionState.Connected
+        }
+    }
+
+    fun refreshConnectionState() {
+        _connectionState.value = deriveState()
+    }
+
+    fun loadBookmarks() {
+        viewModelScope.launch {
+            val entities = bookmarkDao.getAll()
+            _bookmarks.value = entities.map {
+                FileItem(
+                    name = it.name,
+                    path = it.path,
+                    isDirectory = it.isDirectory
+                )
+            }
+        }
+    }
+
+    fun addBookmark(name: String, path: String, isDirectory: Boolean) {
+        viewModelScope.launch {
+            bookmarkDao.insert(
+                BookmarkEntity(name = name, path = path, isDirectory = isDirectory)
+            )
+            loadBookmarks()
+        }
+    }
+
+    fun removeBookmark(path: String) {
+        viewModelScope.launch {
+            bookmarkDao.deleteByPath(path)
+            loadBookmarks()
+        }
     }
 
     private fun loadDirectory(path: String, showLoading: Boolean) {
@@ -290,6 +349,7 @@ class FileExplorerViewModel @Inject constructor(
     }
 
     private fun checkPrerequisites(): Boolean {
+        _connectionState.value = deriveState()
         if (!termuxExecutor.isTermuxInstalled()) {
             _error.value = "Termux is not installed. Please install Termux from F-Droid."
             return false

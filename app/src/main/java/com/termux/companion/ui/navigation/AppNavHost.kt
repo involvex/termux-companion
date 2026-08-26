@@ -25,6 +25,7 @@ import com.termux.companion.ui.editor.EditorScreen
 import com.termux.companion.ui.explorer.FileExplorerScreen
 import com.termux.companion.ui.history.HistoryScreen
 import com.termux.companion.ui.packages.PkgScreen
+import com.termux.companion.ui.processes.ProcessScreen
 import com.termux.companion.ui.settings.SettingsScreen
 import com.termux.companion.ui.snippets.SnippetsScreen
 import com.termux.companion.ui.terminal.TerminalScreen
@@ -78,6 +79,15 @@ fun AppNavHost() {
                     onOpenSnippets = {
                         navController.navigate(Screen.Snippets.route)
                     },
+                    onOpenDiagnostics = {
+                        navController.navigate(Screen.Diagnostics.route)
+                    },
+                    onOpenPackages = {
+                        navController.navigate(Screen.Packages.route)
+                    },
+                    onOpenProcesses = {
+                        navController.navigate(Screen.Processes.route)
+                    },
                     pendingCommand = pendingCommand,
                     onPendingCommandConsumed = {
                         entry.savedStateHandle[PendingCommandKey.REUSED_COMMAND] = ""
@@ -108,6 +118,9 @@ fun AppNavHost() {
             }
             composable(Screen.Diagnostics.route) {
                 DiagnosticsScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.Processes.route) {
+                ProcessScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(Screen.Packages.route) {
                 PkgScreen(onNavigateBack = { navController.popBackStack() })
