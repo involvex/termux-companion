@@ -43,6 +43,7 @@ feature suggestions with impact/effort/confidence ratings.
 | FEAT-002 | Command History browser screen | QB-3: new History route (Terminal top-bar icon) with filter box, match count, tap-to-reuse (bumps usage, hands command back to Terminal input via saved-state result), swipe-to-delete, clear-all dialog. |
 | FEAT-003 | Editor find & replace + go-to-line | QB-4: `SearchPanel` (find w/ n/m counter, prev/next selecting match ranges via `TextFieldValue.selection`, replace-all undoable, go-to-line); pure engine in `utils/SearchUtils.kt` with unit tests. |
 | FEAT-005 | Biometric app lock | QB-5: `BiometricLockGate` wraps `AppNavHost`; prompt with device-credential fallback, re-locks on `ON_STOP`; Settings toggle persisted via DataStore. MainActivity moved to `FragmentActivity` for androidx.biometric. |
+| FEAT-009 | Snippets manager | SnippetEntity + SnippetDao; AppDatabase v3 with MIGRATION_2_3; SnippetsViewModel + SnippetsScreen with FAB/swipe-to-delete/edit dialog; navigation wired (Screen.Snippets route, Terminal "Snippets" menu item, AppNavHost composable); WidgetConfigActivity snippets picker with PickerRow composable; SnippetsViewModelTest (8-case green). |
 | FEAT-016 | Root-aware Wallet Mode flow | Implemented: `probeRoot()` cache, per-step `StepReport` outcomes, safe-abort when accessibility backup fails, resumable toggle-off. |
 | FEAT-017 | Reactive DAO flows & query improvements | QB-2: `observeRecentCommands(): Flow`, substring search query; autocomplete/history consume reactive streams. |
 | FIX-005 | Unsafe shell construction in Editor | Editor I/O now rides base64 transport: reads via `base64 <quoted-path>` decoded locally; saves via `printf '%s' '<b64>' \| base64 -d > <quoted-path>` (immune to `TC_EOF`/quotes/newlines), with a 700k-char encoded-size guard against the Binder intent limit (`EditorViewModel.kt`). Codec in `ShellUtils` (strict RFC4648 decode) unit-tested. |
@@ -76,7 +77,7 @@ feature suggestions with impact/effort/confidence ratings.
 
 | ID | Status | Category | Suggestion | Current State → Improvement | Impact | Effort | Confidence |
 |----|--------|----------|-----------|------------------------------|--------|--------|------------|
-| FEAT-009 | Open | Feature | **Snippets manager** | Named snippets (Room entity #2 — bump DB version w/ migration; note DB is now at v2), snippet picker in terminal toolbar, reuse in widgets (widget infra now supports any source via config activity). | Med-High | Medium | 90% |
+| FEAT-009 | ✅ Resolved | Feature | **Snippets manager** | Named snippets (Room entity + DAO + DB v3 migration), snippet picker in terminal toolbar, reuse in widgets. | Med-High | Medium | 90% |
 | FEAT-010 | Open | UX | **ANSI color rendering in terminal output** | Output is plain `Text`; parse basic SGR sequences into spans. Cap `_outputLines` growth and cap executor read size (`resultFile.readText()` reads whole file into memory). | Medium | Medium | 85% |
 | FEAT-011 | Open | Reliability | **Persist terminal transcript & restore sessions** | Output lives only in `MutableStateFlow` — lost on process death. Persist transcript to Room or log file; offer "restore last session". | Medium | Medium | 85% |
 | FEAT-012 | 🔶 Partial | Feature | **Real connection diagnostics surface** | Checker is now live and probeable via Settings ▸ Connection (FIX-004). Remaining: a dedicated full-screen diagnostics view with step-by-step fix flows for each failed check. | Medium | Low | 90% |
@@ -101,8 +102,8 @@ feature suggestions with impact/effort/confidence ratings.
 
 ## Priority Reasoning
 
-- **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FEAT-009 snippets (can plug into terminal toolbar + widget config picker) and FEAT-012's dedicated diagnostics screen. **All High-Priority features (FEAT-002…008) are resolved as of 2026-08-26.**
+- **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). FEAT-009 snippets manager also completed 2026-08-26. All verified with `gradlew test assembleDebug`.
+- **Next natural targets**: FEAT-010 (ANSI colors) and FEAT-011 (persist terminal transcript). **All High-Priority features (FEAT-002…009) are completed as of 2026-08-26.**
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 
