@@ -6,12 +6,13 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [CommandHistoryEntity::class],
-    version = 2,
+    entities = [CommandHistoryEntity::class, SnippetEntity::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun commandHistoryDao(): CommandHistoryDao
+    abstract fun snippetDao(): SnippetDao
 
     companion object {
         /**
@@ -37,6 +38,22 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_command_history_command` " +
                         "ON `command_history` (`command`)"
+                )
+            }
+        }
+
+        /** v2 -> v3: new snippets table with a unique name index (FEAT-009). */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `snippets` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`command` TEXT NOT NULL, " +
+                        "`timestamp` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_snippets_name` ON `snippets` (`name`)"
                 )
             }
         }

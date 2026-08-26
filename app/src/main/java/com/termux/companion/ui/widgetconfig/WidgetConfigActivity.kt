@@ -47,6 +47,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.db.CommandHistoryDao
+import com.termux.companion.data.db.SnippetDao
+import com.termux.companion.data.db.SnippetEntity
 import com.termux.companion.data.widget.WidgetSettingsRepository
 import com.termux.companion.widget.refreshWidget
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,13 +66,15 @@ import javax.inject.Inject
 class WidgetConfigViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val widgetSettingsRepository: WidgetSettingsRepository,
-    private val commandHistoryDao: CommandHistoryDao
+    private val commandHistoryDao: CommandHistoryDao,
+    private val snippetDao: SnippetDao
 ) : ViewModel() {
 
     data class UiState(
         val command: String = "",
         val label: String = "",
         val recentCommands: List<String> = emptyList(),
+        val snippets: List<SnippetEntity> = emptyList(),
         val loaded: Boolean = false
     )
 
@@ -82,10 +86,12 @@ class WidgetConfigViewModel @Inject constructor(
         viewModelScope.launch {
             val config = runCatching { widgetSettingsRepository.getConfig(appWidgetId) }.getOrNull()
             val recent = runCatching { commandHistoryDao.getRecentCommands(30) }.getOrDefault(emptyList())
+            val snippets = runCatching { snippetDao.getAll() }.getOrDefault(emptyList())
             _state.value = UiState(
                 command = config?.command.orEmpty(),
                 label = config?.label.orEmpty(),
                 recentCommands = recent.map { it.command },
+                snippets = snippets,
                 loaded = true
             )
         }
@@ -154,6 +160,44 @@ class WidgetConfigActivity : ComponentActivity() {
         Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
 }
 
+@Composable
+private fun PickerRow(
+    title: String,
+    detail: String? = null,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp)
+    ) {
+        Text(
+            text = title,
+            style = if (detail == null) TextStyle(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            ) else MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        detail?.let {
+            Text(
+                text = it,
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WidgetConfigScreen(
@@ -219,30 +263,31 @@ private fun WidgetConfigScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Recent commands",
+                text = "Snippets",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
 
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(state.recentCommands, key = { it }) { command ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onCommandChange(command) }
-                            .padding(vertical = 10.dp)
-                    ) {
-                        Text(
-                            text = command,
-                            style = TextStyle(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            ),
-                            maxLines = 2,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
+                items(state.snippets, key = { "s-${it.id}" }) { snippet ->
+                    PickerRow(
+                        title = snippet.name,
+                        detail = snippet.command,
+                        onClick = { onCommandChange(snippet.command) }
+                    )
+                    HorizontalDivider()
+                }
+
+                item(key = "recent-header") {
+                    Text(
+                        text = "Recent commands",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                    )
+                }
+                items(state.recentCommands, key = { "h-$it" }) { command ->
+                    PickerRow(title = command, onClick = { onCommandChange(command) })
                     HorizontalDivider()
                 }
             }

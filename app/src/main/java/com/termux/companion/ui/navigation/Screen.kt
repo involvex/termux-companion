@@ -2,6 +2,7 @@ package com.termux.companion.ui.navigation
 
 import android.net.Uri
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
@@ -15,8 +16,9 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Editor : Screen("editor", "Editor", Icons.Default.Create)
     data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
 
-    /** Secondary screen reached from the Terminal top bar — not a bottom-nav tab. */
+    /** Secondary screens reached from the Terminal top bar — not bottom-nav tabs. */
     data object History : Screen("history", "History", Icons.Default.History)
+    data object Snippets : Screen("snippets", "Snippets", Icons.Default.Code)
 }
 
 object EditorFile {

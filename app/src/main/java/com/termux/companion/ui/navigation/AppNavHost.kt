@@ -24,6 +24,7 @@ import com.termux.companion.ui.editor.EditorScreen
 import com.termux.companion.ui.explorer.FileExplorerScreen
 import com.termux.companion.ui.history.HistoryScreen
 import com.termux.companion.ui.settings.SettingsScreen
+import com.termux.companion.ui.snippets.SnippetsScreen
 import com.termux.companion.ui.terminal.TerminalScreen
 
 object PendingCommandKey {
@@ -72,6 +73,9 @@ fun AppNavHost() {
                     onOpenHistory = {
                         navController.navigate(Screen.History.route)
                     },
+                    onOpenSnippets = {
+                        navController.navigate(Screen.Snippets.route)
+                    },
                     pendingCommand = pendingCommand,
                     onPendingCommandConsumed = {
                         entry.savedStateHandle[PendingCommandKey.REUSED_COMMAND] = ""
@@ -82,6 +86,17 @@ fun AppNavHost() {
                 HistoryScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onUseCommand = { command ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(PendingCommandKey.REUSED_COMMAND, command)
+                        navController.popBackStack()
+                    }
+                )
+            }
+            composable(Screen.Snippets.route) {
+                SnippetsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onUseSnippet = { command ->
                         navController.previousBackStackEntry
                             ?.savedStateHandle
                             ?.set(PendingCommandKey.REUSED_COMMAND, command)

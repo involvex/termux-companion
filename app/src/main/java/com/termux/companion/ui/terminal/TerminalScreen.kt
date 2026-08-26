@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -72,6 +73,7 @@ import com.termux.companion.ui.components.ConnectionStatusBar
 @Composable
 fun TerminalScreen(
     onOpenHistory: () -> Unit = {},
+    onOpenSnippets: () -> Unit = {},
     pendingCommand: String? = null,
     onPendingCommandConsumed: () -> Unit = {},
     viewModel: TerminalViewModel = hiltViewModel()
@@ -140,6 +142,22 @@ fun TerminalScreen(
                                     viewModel.checkConnection()
                                     showMenu = false
                                 }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Command History") },
+                                onClick = {
+                                    onOpenHistory()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.History, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Snippets") },
+                                onClick = {
+                                    onOpenSnippets()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Code, null) }
                             )
                         }
                     }
