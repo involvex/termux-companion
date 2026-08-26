@@ -47,7 +47,10 @@ import com.termux.companion.ui.components.ConnectedIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onOpenDiagnostics: () -> Unit = {}
+) {
     val settings by viewModel.settings.collectAsState()
     val capabilities by viewModel.securityCapabilities.collectAsState()
     val diagnostics by viewModel.diagnostics.collectAsState()
@@ -208,10 +211,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     )
                 } else {
                     TextButton(
-                        onClick = viewModel::runDiagnostics,
+                        onClick = onOpenDiagnostics,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        Text(if (diagnostics == null) "Run diagnostics" else "Re-run diagnostics")
+                        Text(if (diagnostics == null) "Run diagnostics" else "Open full diagnostics")
                     }
                 }
                 diagnostics?.let { d ->

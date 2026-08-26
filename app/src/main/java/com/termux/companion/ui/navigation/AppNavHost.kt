@@ -20,9 +20,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.termux.companion.R
+import com.termux.companion.ui.diagnostics.DiagnosticsScreen
 import com.termux.companion.ui.editor.EditorScreen
 import com.termux.companion.ui.explorer.FileExplorerScreen
 import com.termux.companion.ui.history.HistoryScreen
+import com.termux.companion.ui.packages.PkgScreen
 import com.termux.companion.ui.settings.SettingsScreen
 import com.termux.companion.ui.snippets.SnippetsScreen
 import com.termux.companion.ui.terminal.TerminalScreen
@@ -104,6 +106,12 @@ fun AppNavHost() {
                     }
                 )
             }
+            composable(Screen.Diagnostics.route) {
+                DiagnosticsScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.Packages.route) {
+                PkgScreen(onNavigateBack = { navController.popBackStack() })
+            }
             composable(Screen.Files.route) {
                 FileExplorerScreen(
                     onOpenInEditor = { path ->
@@ -123,7 +131,7 @@ fun AppNavHost() {
                 EditorScreen()
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(onOpenDiagnostics = { navController.navigate(Screen.Diagnostics.route) })
             }
         }
     }
