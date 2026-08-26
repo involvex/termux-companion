@@ -2,14 +2,19 @@ package com.termux.companion.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.termux.companion.data.security.SecurityCapabilities
 import com.termux.companion.data.security.SecurityRepository
+import com.termux.companion.data.security.StepOutcome
+import com.termux.companion.data.security.WalletToggleResult
 import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.domain.model.AppSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,8 +28,26 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
+    private val _securityCapabilities = MutableStateFlow(
+        SecurityCapabilities(hasWriteSecureSettings = false, isTermuxInstalled = false, isRooted = null)
+    )
+    val securityCapabilities: StateFlow<SecurityCapabilities> = _securityCapabilities.asStateFlow()
+
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent = _snackbarEvent.asSharedFlow()
+
+    private val _setupRequiredCommand = MutableSharedFlow<String>()
+    val setupRequiredCommand = _setupRequiredCommand.asSharedFlow()
+
+    init {
+        refreshSecurityCapabilities()
+    }
+
+    fun refreshSecurityCapabilities() {
+        viewModelScope.launch {
+            _securityCapabilities.value = securityRepository.getCapabilities()
+        }
+    }
 
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setDarkMode(enabled) }
@@ -60,14 +83,30 @@ class SettingsViewModel @Inject constructor(
 
     fun toggleWalletMode(enabled: Boolean) {
         viewModelScope.launch {
-            securityRepository.setWalletMode(enabled)
-                .onFailure { e ->
-                    _snackbarEvent.emit(e.message ?: "Failed to toggle security mode")
+            when (val result = securityRepository.setWalletMode(enabled)) {
+                is WalletToggleResult.SetupRequired -> {
+                    _setupRequiredCommand.emit(result.adbGrantCommand)
                 }
-                .onSuccess {
-                    val message = if (enabled) "Security mode enabled" else "Dev mode restored"
-                    _snackbarEvent.emit(message)
+                is WalletToggleResult.Done -> {
+                    refreshSecurityCapabilities()
+                    _snackbarEvent.emit(summarize(result))
                 }
+            }
         }
+    }
+
+    private fun summarize(result: WalletToggleResult.Done): String {
+        val base = if (result.enabling) "Security mode enabled" else "Dev mode restored"
+        val issues = result.reports.mapNotNull { report ->
+            when (val outcome = report.outcome) {
+                is StepOutcome.Failed -> "${report.name}: ${outcome.message}"
+                is StepOutcome.Skipped -> "${report.name} skipped (${outcome.message})"
+                StepOutcome.Success -> null
+            }
+        }
+        if (issues.isEmpty()) return base
+        val shown = issues.take(2).joinToString("; ")
+        val extra = issues.size - 2
+        return if (extra > 0) "$base — $shown (+$extra more issue${if (extra == 1) "" else "s"})" else "$base — $shown"
     }
 }
