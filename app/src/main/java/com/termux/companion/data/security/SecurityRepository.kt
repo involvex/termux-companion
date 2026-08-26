@@ -44,6 +44,7 @@ class SecurityRepository @Inject constructor(
         private const val TAG = "SecurityRepository"
         private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
         private const val ADB_WIFI_ENABLED_KEY = "adb_wifi_enabled"
+        private const val SU_TIMEOUT_MS = 15_000L
         const val WRITE_SECURE_SETTINGS_PERMISSION = Manifest.permission.WRITE_SECURE_SETTINGS
     }
 
@@ -236,20 +237,16 @@ class SecurityRepository @Inject constructor(
      */
     private suspend fun runSuShell(command: String): Result<String> {
         val fullCommand = SecurityCommandBuilder.wrapSu(command)
-        var result: Result<String> = Result.failure(Exception("No result received from Termux"))
+        val result = termuxCommandExecutor.execute(fullCommand, timeoutMs = SU_TIMEOUT_MS)
 
-        termuxCommandExecutor.executeWithResult(fullCommand) { stdout, _, exitCode ->
-            result = if (exitCode == 0) {
-                Log.d(TAG, "Shell command succeeded: $command")
-                Result.success(stdout)
-            } else {
-                val errorMsg = describeSuFailure(exitCode, stdout)
-                Log.w(TAG, "Shell command failed: $command -> $errorMsg")
-                Result.failure(Exception(errorMsg))
-            }
+        return if (result.exitCode == 0) {
+            Log.d(TAG, "Shell command succeeded: $command")
+            Result.success(result.stdout)
+        } else {
+            val errorMsg = describeSuFailure(result.exitCode, result.stdout)
+            Log.w(TAG, "Shell command failed: $command -> $errorMsg")
+            Result.failure(Exception(errorMsg))
         }
-
-        return result
     }
 
     private fun describeSuFailure(exitCode: Int, output: String): String {

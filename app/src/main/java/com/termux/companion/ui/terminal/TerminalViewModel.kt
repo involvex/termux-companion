@@ -34,6 +34,8 @@ sealed class ConnectionState {
     data object TermuxNotInstalled : ConnectionState()
 }
 
+private const val TERMINAL_TIMEOUT_MS = 15_000L
+
 @HiltViewModel
 class TerminalViewModel @Inject constructor(
     private val termuxExecutor: TermuxCommandExecutor,
@@ -118,31 +120,25 @@ class TerminalViewModel @Inject constructor(
 
         commandJob?.cancel()
         commandJob = viewModelScope.launch {
-            termuxExecutor.executeWithResult(
+            val result = termuxExecutor.execute(
                 command = command,
-                workdir = "/data/data/com.termux/files/home"
-            ) { stdout, stderr, exitCode ->
-                viewModelScope.launch {
-                    if (stdout.isNotBlank()) {
-                        appendOutput(stdout, isError = false)
-                    }
-                    if (stderr.isNotBlank()) {
-                        appendOutput(stderr, isError = true)
-                    }
-                    if (stdout.isBlank() && stderr.isBlank()) {
-                        appendOutput("[Command completed with exit code $exitCode]", isError = exitCode != 0)
-                    }
-                    _isExecuting.value = false
-                    _suggestions.value = emptyList()
-                }
+                workdir = "/data/data/com.termux/files/home",
+                timeoutMs = TERMINAL_TIMEOUT_MS
+            )
+            if (result.stdout.isNotBlank()) {
+                appendOutput(result.stdout, isError = false)
             }
-
-            delay(15000)
-            if (_isExecuting.value) {
-                _isExecuting.value = false
-                appendOutput("[Timeout: No response from Termux after 15 seconds]", isError = true)
-                appendOutput("Make sure Termux is installed and allow-external-apps=true is set.", isError = true)
+            if (result.stderr.isNotBlank()) {
+                appendOutput(result.stderr, isError = true)
             }
+            if (result.stdout.isBlank() && result.stderr.isBlank()) {
+                appendOutput(
+                    "[Command completed with exit code ${result.exitCode}]",
+                    isError = result.exitCode != 0
+                )
+            }
+            _isExecuting.value = false
+            _suggestions.value = emptyList()
         }
     }
 

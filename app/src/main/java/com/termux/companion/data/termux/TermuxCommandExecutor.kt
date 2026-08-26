@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import android.util.Log
+import com.termux.companion.domain.model.CommandResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -32,6 +33,7 @@ class TermuxCommandExecutor @Inject constructor(
         const val EXTRA_SESSION_ACTION = "com.termux.RUN_COMMAND_SESSION_ACTION"
 
         private const val TAG = "TermuxCmdExec"
+        private const val POLL_INTERVAL_MS = 500L
 
         fun getDownloadDir(): File {
             return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -54,11 +56,11 @@ class TermuxCommandExecutor @Inject constructor(
             android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    override suspend fun executeWithResult(
+    override suspend fun execute(
         command: String,
         workdir: String,
-        callback: (stdout: String, stderr: String, exitCode: Int) -> Unit
-    ) {
+        timeoutMs: Long
+    ): CommandResult {
         val id = nextId.incrementAndGet()
 
         val downloadDir = getDownloadDir()
@@ -71,39 +73,46 @@ class TermuxCommandExecutor @Inject constructor(
         sendToTermux(wrapped, workdir)
 
         Log.d(TAG, "Command #$id wrapped to: $wrapped")
-        Log.d(TAG, "Polling for: ${resultFile.absolutePath}")
 
-        // Primary: file-based polling via shared storage
-        withContext(Dispatchers.IO) {
-            Log.d(TAG, "Polling for results in: ${downloadDir.absolutePath}")
-
-            for (attempt in 1..20) {
-                delay(500)
-                try {
-                    if (doneFile.exists()) {
-                        val exitCode = doneFile.readText().trim().toIntOrNull() ?: -1
-                        if (resultFile.exists()) {
-                            val stdout = resultFile.readText()
-                            resultFile.delete()
-                            doneFile.delete()
-                            Log.d(TAG, "Got result for #$id: ${stdout.take(80)}")
-                            withContext(Dispatchers.Main) { callback(stdout, "", exitCode) }
-                            return@withContext
+        return withContext(Dispatchers.IO) {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            try {
+                while (true) {
+                    delay(POLL_INTERVAL_MS)
+                    try {
+                        if (doneFile.exists()) {
+                            val exitCode = doneFile.readText().trim().toIntOrNull() ?: -1
+                            if (resultFile.exists()) {
+                                val stdout = resultFile.readText()
+                                Log.d(TAG, "Got result for #$id: ${stdout.take(80)}")
+                                return@withContext CommandResult(command, stdout, "", exitCode)
+                            }
                         }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Poll error for #$id: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Poll error for #$id: ${e.message}")
+                    if (System.currentTimeMillis() >= deadline) break
+                }
+                Log.w(TAG, "Timeout for #$id after ${timeoutMs}ms")
+                CommandResult(command, "", timeoutHint(timeoutMs), -1)
+            } finally {
+                // Sweep this invocation's leftovers on success, timeout, AND cancellation.
+                runCatching {
+                    resultFile.delete()
+                    doneFile.delete()
                 }
             }
-            Log.w(TAG, "Timeout for #$id")
-            val hint = if (!canReadSharedStorage()) {
+        }
+    }
+
+    private fun timeoutHint(timeoutMs: Long): String {
+        val seconds = timeoutMs / 1000
+        return if (!canReadSharedStorage()) {
+            "Timeout: no result from Termux after ${seconds}s.\n\n" +
                 "Storage permission needed. On Android 11+: Settings > Apps > Termux Companion > 'All files access'"
-            } else {
-                "Check: 1) 'termux-setup-storage' run in Termux? 2) File at ${resultFile.absolutePath} exists?"
-            }
-            withContext(Dispatchers.Main) {
-                callback("", "Timeout: no result from Termux after 10s.\n\n$hint", -1)
-            }
+        } else {
+            "Timeout: no result from Termux after ${seconds}s.\n\n" +
+                "Check: 1) 'termux-setup-storage' run in Termux? 2) allow-external-apps=true set?"
         }
     }
 

@@ -1,6 +1,7 @@
 package com.termux.companion.ui.explorer
 
 import com.termux.companion.data.termux.TermuxCommandRunner
+import com.termux.companion.domain.model.CommandResult
 import com.termux.companion.domain.model.FileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,16 +29,16 @@ class FileExplorerViewModelTest {
         override fun isTermuxInstalled() = installed
         override fun hasRunCommandPermission() = permitted
 
-        override suspend fun executeWithResult(
+        override suspend fun execute(
             command: String,
             workdir: String,
-            callback: (stdout: String, stderr: String, exitCode: Int) -> Unit
-        ) {
+            timeoutMs: Long
+        ): CommandResult {
             executedCommands.add(command)
-            if (command.startsWith("ls ")) {
-                callback(LS_OUTPUT, "", 0)
+            return if (command.startsWith("ls ")) {
+                CommandResult(command, LS_OUTPUT, "", 0)
             } else {
-                callback("", "", 0)
+                CommandResult(command, "", "", 0)
             }
         }
 

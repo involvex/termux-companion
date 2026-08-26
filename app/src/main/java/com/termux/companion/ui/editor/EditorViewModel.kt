@@ -5,12 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.ui.navigation.EditorFile
-import com.termux.companion.utils.Constants
 import com.termux.companion.utils.SearchUtils
 import com.termux.companion.utils.ShellUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +33,7 @@ class EditorViewModel @Inject constructor(
         // Command travels inside an Intent extra (~1 MB Binder transaction limit);
         // base64 inflates size by 4/3, so cap the encoded payload well below it.
         private const val MAX_ENCODED_PAYLOAD_CHARS = 700_000
+        private const val FILE_TIMEOUT_MS = 10_000L
     }
 
     private val _content = MutableStateFlow("")
@@ -92,35 +91,26 @@ class EditorViewModel @Inject constructor(
         pendingJob = viewModelScope.launch {
             // FIX-005: read via `base64` so quotes/newlines in the path or content
             // can never break shell parsing; decode locally.
-            termuxExecutor.executeWithResult(
+            val result = termuxExecutor.execute(
                 command = "base64 ${ShellUtils.quote(path)}",
-                workdir = Constants.TERMUX_HOME
-            ) { stdout, _, exitCode ->
-                viewModelScope.launch {
-                    if (exitCode == 0) {
-                        val decoded = ShellUtils.decodeBase64Text(stdout)
-                        if (decoded == null) {
-                            _error.value = "Failed to decode file contents from Termux"
-                        } else {
-                            _content.value = decoded
-                            _originalContent.value = decoded
-                            _hasUnsavedChanges.value = false
-                            undoStack.clear()
-                            redoStack.clear()
-                            clearSearch()
-                        }
-                    } else {
-                        _error.value = stdout.ifBlank { "Failed to read file" }
-                    }
-                    _isLoading.value = false
+                timeoutMs = FILE_TIMEOUT_MS
+            )
+            if (result.exitCode == 0) {
+                val decoded = ShellUtils.decodeBase64Text(result.stdout)
+                if (decoded == null) {
+                    _error.value = "Failed to decode file contents from Termux"
+                } else {
+                    _content.value = decoded
+                    _originalContent.value = decoded
+                    _hasUnsavedChanges.value = false
+                    undoStack.clear()
+                    redoStack.clear()
+                    clearSearch()
                 }
+            } else {
+                _error.value = result.stdout.ifBlank { "Failed to read file" }
             }
-
-            delay(10000)
-            if (_isLoading.value) {
-                _isLoading.value = false
-                _error.value = "Timeout: No response from Termux"
-            }
+            _isLoading.value = false
         }
     }
 
@@ -152,19 +142,16 @@ class EditorViewModel @Inject constructor(
                 return@launch
             }
 
-            termuxExecutor.executeWithResult(
+            val result = termuxExecutor.execute(
                 command = "printf '%s' '$encoded' | base64 -d > ${ShellUtils.quote(path)}",
-                workdir = Constants.TERMUX_HOME
-            ) { stdout, stderr, exitCode ->
-                viewModelScope.launch {
-                    if (exitCode == 0) {
-                        _originalContent.value = _content.value
-                        _hasUnsavedChanges.value = false
-                        _error.value = "File saved successfully"
-                    } else {
-                        _error.value = "Failed to save: ${stderr.ifEmpty { stdout }}"
-                    }
-                }
+                timeoutMs = FILE_TIMEOUT_MS
+            )
+            if (result.exitCode == 0) {
+                _originalContent.value = _content.value
+                _hasUnsavedChanges.value = false
+                _error.value = "File saved successfully"
+            } else {
+                _error.value = "Failed to save: ${result.stderr.ifEmpty { result.stdout }}"
             }
         }
     }

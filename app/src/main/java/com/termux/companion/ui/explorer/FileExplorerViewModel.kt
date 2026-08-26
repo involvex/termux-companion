@@ -4,11 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.termux.TermuxCommandRunner
 import com.termux.companion.domain.model.FileItem
-import com.termux.companion.utils.Constants
 import com.termux.companion.utils.ShellUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +23,9 @@ data class OverwriteConfirmation(
     val message: String,
     val onProceed: () -> Unit
 )
+
+private const val DIR_TIMEOUT_MS = 10_000L
+private const val OP_TIMEOUT_MS = 10_000L
 
 @HiltViewModel
 class FileExplorerViewModel @Inject constructor(
@@ -82,30 +83,23 @@ class FileExplorerViewModel @Inject constructor(
         _error.value = null
 
         pendingJob = viewModelScope.launch {
-            termuxExecutor.executeWithResult(
-                command = "ls -la --color=never -p \"$path\" 2>&1",
-                workdir = "/data/data/com.termux/files/home"
-            ) { stdout, stderr, exitCode ->
-                viewModelScope.launch {
-                    if (exitCode == 0 && stdout.isNotBlank()) {
-                        _files.value = parseLsOutput(stdout, path)
-                        _currentPath.value = path
-                    } else if (stdout.contains("Permission denied") || stderr.contains("Permission denied")) {
-                        _error.value = "Permission denied. In Termux, run:\necho \"allow-external-apps=true\" >> ~/.termux/termux.properties"
-                    } else if (stdout.contains("No such file") || stderr.contains("No such file")) {
-                        _error.value = "Directory not found: $path"
-                    } else {
-                        _error.value = stdout.ifBlank { stderr.ifBlank { "Unknown error (exit code: $exitCode)" } }
-                    }
-                    _isLoading.value = false
+            val result = termuxExecutor.execute(
+                command = "ls -la --color=never -p ${ShellUtils.quote(path)} 2>&1",
+                timeoutMs = DIR_TIMEOUT_MS
+            )
+            if (result.exitCode == 0 && result.stdout.isNotBlank()) {
+                _files.value = parseLsOutput(result.stdout, path)
+                _currentPath.value = path
+            } else if (result.stdout.contains("Permission denied") || result.stderr.contains("Permission denied")) {
+                _error.value = "Permission denied. In Termux, run:\necho \"allow-external-apps=true\" >> ~/.termux/termux.properties"
+            } else if (result.stdout.contains("No such file") || result.stderr.contains("No such file")) {
+                _error.value = "Directory not found: $path"
+            } else {
+                _error.value = result.stdout.ifBlank {
+                    result.stderr.ifBlank { "Unknown error (exit code: ${result.exitCode})" }
                 }
             }
-
-            delay(10000)
-            if (_isLoading.value) {
-                _isLoading.value = false
-                _error.value = "Timeout: No response from Termux.\n\nMake sure:\n1. Termux is installed and updated\n2. allow-external-apps=true is set in ~/.termux/termux.properties\n3. RUN_COMMAND permission is granted"
-            }
+            _isLoading.value = false
         }
     }
 
@@ -258,20 +252,15 @@ class FileExplorerViewModel @Inject constructor(
         val format = "Permissions: %A\\nOwner: %U:%G\\nSize: %s bytes\\nModified: %y\\nPath: %N"
         operationJob = viewModelScope.launch {
             try {
-                var stdout = ""
-                var exitCode = Int.MIN_VALUE
-                termuxExecutor.executeWithResult(
+                val result = termuxExecutor.execute(
                     command = "stat -c ${ShellUtils.quote(format)} ${ShellUtils.quote(item.path)}",
-                    workdir = Constants.TERMUX_HOME
-                ) { out, _, code ->
-                    stdout = out
-                    exitCode = code
-                }
-                if (exitCode == 0) {
-                    _propertiesText.value = stdout.trim().ifBlank { "No details available" }
+                    timeoutMs = OP_TIMEOUT_MS
+                )
+                if (result.exitCode == 0) {
+                    _propertiesText.value = result.stdout.trim().ifBlank { "No details available" }
                 } else {
-                    _error.value = stdout.lineSequence().firstOrNull { it.isNotBlank() }
-                        ?: "Failed to read properties (exit code $exitCode)"
+                    _error.value = result.stdout.lineSequence().firstOrNull { it.isNotBlank() }
+                        ?: "Failed to read properties (exit code ${result.exitCode})"
                 }
             } finally {
                 _isOperating.value = false
@@ -327,19 +316,14 @@ class FileExplorerViewModel @Inject constructor(
         _error.value = null
         operationJob = viewModelScope.launch {
             try {
-                var stdout = ""
-                var exitCode = Int.MIN_VALUE
-                termuxExecutor.executeWithResult(command, workdir = Constants.TERMUX_HOME) { out, _, code ->
-                    stdout = out
-                    exitCode = code
-                }
-                if (exitCode == 0) {
+                val result = termuxExecutor.execute(command, timeoutMs = OP_TIMEOUT_MS)
+                if (result.exitCode == 0) {
                     _message.value = successMessage
                     onSuccess()
                     refreshSilently()
                 } else {
-                    _error.value = stdout.lineSequence().firstOrNull { it.isNotBlank() }
-                        ?: "Operation failed (exit code $exitCode)"
+                    _error.value = result.stdout.lineSequence().firstOrNull { it.isNotBlank() }
+                        ?: "Operation failed (exit code ${result.exitCode})"
                 }
             } finally {
                 _isOperating.value = false
