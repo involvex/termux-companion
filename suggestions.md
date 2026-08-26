@@ -45,6 +45,7 @@ feature suggestions with impact/effort/confidence ratings.
 | FEAT-005 | Biometric app lock | QB-5: `BiometricLockGate` wraps `AppNavHost`; prompt with device-credential fallback, re-locks on `ON_STOP`; Settings toggle persisted via DataStore. MainActivity moved to `FragmentActivity` for androidx.biometric. |
 | FEAT-016 | Root-aware Wallet Mode flow | Implemented: `probeRoot()` cache, per-step `StepReport` outcomes, safe-abort when accessibility backup fails, resumable toggle-off. |
 | FEAT-017 | Reactive DAO flows & query improvements | QB-2: `observeRecentCommands(): Flow`, substring search query; autocomplete/history consume reactive streams. |
+| FIX-005 | Unsafe shell construction in Editor | Editor I/O now rides base64 transport: reads via `base64 <quoted-path>` decoded locally; saves via `printf '%s' '<b64>' \| base64 -d > <quoted-path>` (immune to `TC_EOF`/quotes/newlines), with a 700k-char encoded-size guard against the Binder intent limit (`EditorViewModel.kt`). Codec in `ShellUtils` (strict RFC4648 decode) unit-tested. |
 
 ---
 
@@ -52,7 +53,6 @@ feature suggestions with impact/effort/confidence ratings.
 
 | ID | Status | Issue | Location | Detail |
 |----|--------|-------|----------|--------|
-| FIX-005 | 🔶 Partial | **Unsafe shell construction in Editor** | `EditorViewModel.kt:71,116` | Explorer ops are now quoted/validated via `ShellUtils`. Remaining scope is Editor-only: heredoc save (`<< 'TC_EOF'`) corrupts files containing that delimiter and exceeds the ~1 MB Binder intent limit on large files; `cat "$path"` breaks on paths containing quotes. Base64-encode payloads (`echo <b64> \| base64 -d > <quoted-path>`) for both read and write. |
 | FIX-004 | Open | **Diagnostics always fail** | `data/termux/TermuxDiagnosticsChecker.kt:44-53` | `Runtime.exec("grep … /data/data/com.termux/…")` reads another app's private dir — always fails without root, so `allowExternalApps` is always reported `false`. Replace with a round-trip probe: send `echo tc-probe-$id` through the executor and verify the result arrives. |
 | NEW-003 | Open | **Cancelled jobs leak temp files & duplicate timeout logic** | `TerminalViewModel.kt:120-147` + executor | Cancelling `commandJob` mid-poll abandons result files and skips cleanup; timeouts are duplicated (executor 10 s poll vs VM 15 s timer). Supersedes FEAT-024's scope partially — centralize into one suspend `execute(): CommandResult` API with structured concurrency. |
 
@@ -100,7 +100,7 @@ feature suggestions with impact/effort/confidence ratings.
 ## Priority Reasoning
 
 - **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FIX-005 editor base64 I/O and NEW-003's suspend executor API (they touch the same code), then FEAT-007 run-from-editor which rides on both.
+- **Next natural targets**: NEW-003's suspend executor API (single structured-concurrency entry point), then FEAT-007 run-from-editor and FEAT-004 widget config. FIX-005 editor base64 I/O landed 2026-08-26.
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 

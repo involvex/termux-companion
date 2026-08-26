@@ -135,4 +135,36 @@ class ShellUtilsTest {
     fun validateFileName_allowsUnicode() {
         assertNull(ShellUtils.validateFileName("résumé.md"))
     }
+
+    @Test
+    fun encodeBase64Utf8_roundTripsHostileContent() {
+        val hostile = "TC_EOF\nquotes ' and \" | pipe \$dollar\n\ttab unicode é漢字"
+        val encoded = ShellUtils.encodeBase64Utf8(hostile)
+
+        assertTrue(encoded.matches(Regex("[A-Za-z0-9+/=]+")))
+        assertFalse(encoded.contains('\n'))
+        assertEquals(hostile, ShellUtils.decodeBase64Text(encoded))
+    }
+
+    @Test
+    fun decodeBase64Text_toleratesCliLineWrapping() {
+        val original = "a".repeat(300)
+        val wrapped = ShellUtils.encodeBase64Utf8(original)
+            .chunked(76)
+            .joinToString("\n")
+        assertEquals(original, ShellUtils.decodeBase64Text(wrapped))
+    }
+
+    @Test
+    fun decodeBase64Text_returnsNullOnMalformedInput() {
+        assertNull(ShellUtils.decodeBase64Text("!!!not base64!!!"))
+        assertNull(ShellUtils.decodeBase64Text("base64: invalid input"))
+    }
+
+    @Test
+    fun encodeBase64Utf8_handlesEmptyAndBlank() {
+        assertEquals("", ShellUtils.encodeBase64Utf8(""))
+        assertEquals("", ShellUtils.decodeBase64Text(""))
+        assertEquals(" ", ShellUtils.decodeBase64Text("IA=="))
+    }
 }

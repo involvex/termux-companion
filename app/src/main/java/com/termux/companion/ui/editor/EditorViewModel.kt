@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.ui.navigation.EditorFile
+import com.termux.companion.utils.Constants
 import com.termux.companion.utils.SearchUtils
+import com.termux.companion.utils.ShellUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,6 +30,12 @@ class EditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val termuxExecutor: TermuxCommandExecutor
 ) : ViewModel() {
+
+    companion object {
+        // Command travels inside an Intent extra (~1 MB Binder transaction limit);
+        // base64 inflates size by 4/3, so cap the encoded payload well below it.
+        private const val MAX_ENCODED_PAYLOAD_CHARS = 700_000
+    }
 
     private val _content = MutableStateFlow("")
     val content: StateFlow<String> = _content.asStateFlow()
@@ -82,20 +90,27 @@ class EditorViewModel @Inject constructor(
         _error.value = null
 
         pendingJob = viewModelScope.launch {
+            // FIX-005: read via `base64` so quotes/newlines in the path or content
+            // can never break shell parsing; decode locally.
             termuxExecutor.executeWithResult(
-                command = "cat \"$path\" 2>&1",
-                workdir = "/data/data/com.termux/files/home"
-            ) { stdout, stderr, exitCode ->
+                command = "base64 ${ShellUtils.quote(path)}",
+                workdir = Constants.TERMUX_HOME
+            ) { stdout, _, exitCode ->
                 viewModelScope.launch {
                     if (exitCode == 0) {
-                        _content.value = stdout
-                        _originalContent.value = stdout
-                        _hasUnsavedChanges.value = false
-                        undoStack.clear()
-                        redoStack.clear()
-                        clearSearch()
+                        val decoded = ShellUtils.decodeBase64Text(stdout)
+                        if (decoded == null) {
+                            _error.value = "Failed to decode file contents from Termux"
+                        } else {
+                            _content.value = decoded
+                            _originalContent.value = decoded
+                            _hasUnsavedChanges.value = false
+                            undoStack.clear()
+                            redoStack.clear()
+                            clearSearch()
+                        }
                     } else {
-                        _error.value = stdout.ifBlank { stderr.ifBlank { "Failed to read file" } }
+                        _error.value = stdout.ifBlank { "Failed to read file" }
                     }
                     _isLoading.value = false
                 }
@@ -127,15 +142,23 @@ class EditorViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val contentToSave = _content.value
+            // FIX-005: write via base64 pipe instead of a heredoc — immune to
+            // content containing the old TC_EOF delimiter, and the encoded size is
+            // checked against the Binder intent limit before dispatching.
+            val encoded = ShellUtils.encodeBase64Utf8(_content.value)
+            if (encoded.length > MAX_ENCODED_PAYLOAD_CHARS) {
+                _error.value = "File too large to save over IPC " +
+                    "(${encoded.length} encoded chars, limit $MAX_ENCODED_PAYLOAD_CHARS)"
+                return@launch
+            }
 
             termuxExecutor.executeWithResult(
-                command = "cat > \"$path\" << 'TC_EOF'\n$contentToSave\nTC_EOF",
-                workdir = "/data/data/com.termux/files/home"
+                command = "printf '%s' '$encoded' | base64 -d > ${ShellUtils.quote(path)}",
+                workdir = Constants.TERMUX_HOME
             ) { stdout, stderr, exitCode ->
                 viewModelScope.launch {
                     if (exitCode == 0) {
-                        _originalContent.value = contentToSave
+                        _originalContent.value = _content.value
                         _hasUnsavedChanges.value = false
                         _error.value = "File saved successfully"
                     } else {
