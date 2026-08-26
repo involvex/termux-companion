@@ -7,6 +7,7 @@ import com.termux.companion.data.ai.CommandAutocomplete
 import com.termux.companion.data.db.AppDatabase
 import com.termux.companion.data.db.CommandHistoryDao
 import com.termux.companion.data.db.SnippetDao
+import com.termux.companion.data.db.TranscriptDao
 import com.termux.companion.data.security.CryptoStore
 import com.termux.companion.data.security.SecurityRepository
 import com.termux.companion.data.settings.SettingsRepository
@@ -32,7 +33,11 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "termux_companion.db"
-        ).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+        ).addMigrations(
+                    AppDatabase.MIGRATION_1_2,
+                    AppDatabase.MIGRATION_2_3,
+                    AppDatabase.MIGRATION_3_4
+                ).build()
     }
 
     @Provides
@@ -45,6 +50,12 @@ object AppModule {
     @Singleton
     fun provideSnippetDao(db: AppDatabase): SnippetDao {
         return db.snippetDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideTranscriptDao(db: AppDatabase): TranscriptDao {
+        return db.transcriptDao()
     }
 
     @Provides

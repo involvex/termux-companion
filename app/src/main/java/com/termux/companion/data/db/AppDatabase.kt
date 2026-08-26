@@ -6,13 +6,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [CommandHistoryEntity::class, SnippetEntity::class],
-    version = 3,
+    entities = [CommandHistoryEntity::class, SnippetEntity::class, TranscriptEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun commandHistoryDao(): CommandHistoryDao
     abstract fun snippetDao(): SnippetDao
+    abstract fun transcriptDao(): TranscriptDao
 
     companion object {
         /**
@@ -54,6 +55,23 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_snippets_name` ON `snippets` (`name`)"
+                )
+            }
+        }
+
+        /** v3 -> v4: new transcript table for persisted terminal output (FEAT-011). */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `transcript` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`text` TEXT NOT NULL, " +
+                        "`is_error` INTEGER NOT NULL, " +
+                        "`is_command` INTEGER NOT NULL, " +
+                        "`timestamp` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_transcript_timestamp` ON `transcript` (`timestamp`)"
                 )
             }
         }

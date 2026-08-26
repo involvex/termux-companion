@@ -7,6 +7,8 @@ import com.termux.companion.data.ai.AISuggestionService
 import com.termux.companion.data.ai.CommandAutocomplete
 import com.termux.companion.data.db.CommandHistoryDao
 import com.termux.companion.data.db.CommandHistoryEntity
+import com.termux.companion.data.db.TranscriptDao
+import com.termux.companion.data.db.TranscriptEntity
 import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.domain.model.AutocompleteSuggestion
@@ -38,6 +40,7 @@ sealed class ConnectionState {
 }
 
 private const val TERMINAL_TIMEOUT_MS = 15_000L
+private const val TRANSCRIPT_MAX_LINES = 200
 private val TERMINAL_DEFAULT_FG = Color(0xFFE5E5E5)
 
 @HiltViewModel
@@ -46,7 +49,8 @@ class TerminalViewModel @Inject constructor(
     private val commandHistoryDao: CommandHistoryDao,
     private val commandAutocomplete: CommandAutocomplete,
     private val aiSuggestionService: AISuggestionService,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val transcriptDao: TranscriptDao
 ) : ViewModel() {
 
     private val _outputLines = MutableStateFlow<List<TerminalOutput>>(listOf(
@@ -79,6 +83,7 @@ class TerminalViewModel @Inject constructor(
         checkConnection()
         observeHistory()
         observeRecallHistory()
+        restoreTranscript()
         viewModelScope.launch {
             commandAutocomplete.loadCommands()
         }
@@ -213,10 +218,33 @@ class TerminalViewModel @Inject constructor(
     private fun appendOutput(text: String, isError: Boolean = false, isCommand: Boolean = false) {
         val spans = AnsiParser.parse(text, TERMINAL_DEFAULT_FG)
         _outputLines.value = _outputLines.value + TerminalOutput(text, isError, isCommand, spans)
+        viewModelScope.launch {
+            transcriptDao.insert(
+                TranscriptEntity(
+                    text = text,
+                    isError = isError,
+                    isCommand = isCommand
+                )
+            )
+        }
+    }
+
+    private fun restoreTranscript() {
+        viewModelScope.launch {
+            val lines = transcriptDao.getRecent(TRANSCRIPT_MAX_LINES)
+            if (lines.isNotEmpty()) {
+                _outputLines.value = lines.map {
+                    TerminalOutput(it.text, it.isError, it.isCommand)
+                }
+            }
+        }
     }
 
     fun clearTerminal() {
         _outputLines.value = emptyList()
+        viewModelScope.launch {
+            transcriptDao.clearAll()
+        }
     }
 
     fun dismissSuggestions() {

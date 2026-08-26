@@ -78,8 +78,8 @@ feature suggestions with impact/effort/confidence ratings.
 | ID | Status | Category | Suggestion | Current State → Improvement | Impact | Effort | Confidence |
 |----|--------|----------|-----------|------------------------------|--------|--------|------------|
 | FEAT-009 | ✅ Resolved | Feature | **Snippets manager** | Named snippets (Room entity + DAO + DB v3 migration), snippet picker in terminal toolbar, reuse in widgets. | Med-High | Medium | 90% |
-| FEAT-010 | Open | UX | **ANSI color rendering in terminal output** | Output is plain `Text`; parse basic SGR sequences into spans. Cap `_outputLines` growth and cap executor read size (`resultFile.readText()` reads whole file into memory). | Medium | Medium | 85% |
-| FEAT-011 | Open | Reliability | **Persist terminal transcript & restore sessions** | Output lives only in `MutableStateFlow` — lost on process death. Persist transcript to Room or log file; offer "restore last session". | Medium | Medium | 85% |
+| FEAT-010 | ✅ Resolved | UX | **ANSI color rendering in terminal output** | `AnsiSpan` data class + `AnsiParser` (SGR basic 16/256-color, bold/dim/italic/underline/blink/inverse/hidden/strikethrough). `TerminalViewModel.appendOutput()` calls `AnsiParser.parse()`, `TerminalOutputLine` renders `AnnotatedString` with spans. Cap on `_outputLines` growth + read-size cap deferred. | Medium | Medium | 90% |
+| FEAT-011 | 🔶 In Progress | Reliability | **Persist terminal transcript & restore sessions** | `TranscriptEntity` + `TranscriptDao` (DB v4 / `MIGRATION_3_4`), `Trans` persisted on `appendOutput()` and restored (last 200) in `init`. `clearTerminal` also clears DB. | Medium | Medium | 85% |
 | FEAT-012 | 🔶 Partial | Feature | **Real connection diagnostics surface** | Checker is now live and probeable via Settings ▸ Connection (FIX-004). Remaining: a dedicated full-screen diagnostics view with step-by-step fix flows for each failed check. | Medium | Low | 90% |
 | FEAT-013 | Open | Feature | **Package manager UI** | Wrap `pkg list-installed / search / install / uninstall` with confirmations and progress streaming. | Medium | Medium-High | 80% |
 | FEAT-014 | Open | Feature | **Process monitor** | Parse `ps -ef` into a list with CPU/MEM columns and kill action w/ confirm. Pairs with FEAT-013 as a "System" tab. | Medium | Medium | 80% |
@@ -102,8 +102,8 @@ feature suggestions with impact/effort/confidence ratings.
 
 ## Priority Reasoning
 
-- **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). FEAT-009 snippets manager also completed 2026-08-26. All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FEAT-010 (ANSI colors) and FEAT-011 (persist terminal transcript). **All High-Priority features (FEAT-002…009) are completed as of 2026-08-26.**
+- **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). FEAT-009 snippets manager and FEAT-010 ANSI color parsing completed 2026-08-26. All verified with `gradlew test assembleDebug`.
+- **Next natural targets**: FEAT-011 (persist terminal transcript) in progress; FEAT-012 (real connection diagnostics) and FEAT-013 (package manager UI) are next. **All High-Priority features (FEAT-002…010) are completed as of 2026-08-26.**
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 
