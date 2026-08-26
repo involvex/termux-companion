@@ -9,6 +9,7 @@ import com.termux.companion.data.db.CommandHistoryDao
 import com.termux.companion.data.security.SecurityRepository
 import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.data.termux.TermuxCommandExecutor
+import com.termux.companion.data.termux.TermuxCommandRunner
 import com.termux.companion.data.termux.TermuxDiagnosticsChecker
 import dagger.Module
 import dagger.Provides
@@ -59,6 +60,12 @@ object AppModule {
     @Singleton
     fun provideTermuxCommandExecutor(@ApplicationContext context: Context): TermuxCommandExecutor {
         return TermuxCommandExecutor(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTermuxCommandRunner(executor: TermuxCommandExecutor): TermuxCommandRunner {
+        return executor
     }
 
     @Provides

@@ -2,7 +2,7 @@ package com.termux.companion.ui.explorer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.termux.companion.data.termux.TermuxCommandExecutor
+import com.termux.companion.data.termux.TermuxCommandRunner
 import com.termux.companion.domain.model.FileItem
 import com.termux.companion.utils.Constants
 import com.termux.companion.utils.ShellUtils
@@ -28,7 +28,7 @@ data class OverwriteConfirmation(
 
 @HiltViewModel
 class FileExplorerViewModel @Inject constructor(
-    private val termuxExecutor: TermuxCommandExecutor
+    private val termuxExecutor: TermuxCommandRunner
 ) : ViewModel() {
 
     private val _currentPath = MutableStateFlow("/data/data/com.termux/files/home")
@@ -67,10 +67,18 @@ class FileExplorerViewModel @Inject constructor(
     }
 
     fun listDirectory(path: String) {
+        loadDirectory(path, showLoading = true)
+    }
+
+    private fun refreshSilently() {
+        loadDirectory(_currentPath.value, showLoading = false)
+    }
+
+    private fun loadDirectory(path: String, showLoading: Boolean) {
         if (!checkPrerequisites()) return
 
         pendingJob?.cancel()
-        _isLoading.value = true
+        _isLoading.value = showLoading
         _error.value = null
 
         pendingJob = viewModelScope.launch {
@@ -328,7 +336,7 @@ class FileExplorerViewModel @Inject constructor(
                 if (exitCode == 0) {
                     _message.value = successMessage
                     onSuccess()
-                    refresh()
+                    refreshSilently()
                 } else {
                     _error.value = stdout.lineSequence().firstOrNull { it.isNotBlank() }
                         ?: "Operation failed (exit code $exitCode)"

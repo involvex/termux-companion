@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class TermuxCommandExecutor @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : TermuxCommandRunner {
     private val nextId = AtomicLong(0)
 
     companion object {
@@ -38,11 +38,11 @@ class TermuxCommandExecutor @Inject constructor(
         }
     }
 
-    fun isTermuxInstalled() = try {
+    override fun isTermuxInstalled() = try {
         context.packageManager.getPackageInfo(TERMUX_PACKAGE, 0); true
     } catch (e: Exception) { false }
 
-    fun hasRunCommandPermission() =
+    override fun hasRunCommandPermission() =
         context.checkSelfPermission("com.termux.permission.RUN_COMMAND") ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
 
@@ -54,9 +54,9 @@ class TermuxCommandExecutor @Inject constructor(
             android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    suspend fun executeWithResult(
+    override suspend fun executeWithResult(
         command: String,
-        workdir: String = "/data/data/com.termux/files/home",
+        workdir: String,
         callback: (stdout: String, stderr: String, exitCode: Int) -> Unit
     ) {
         val id = nextId.incrementAndGet()
@@ -107,7 +107,7 @@ class TermuxCommandExecutor @Inject constructor(
         }
     }
 
-    fun executeCommandNoResult(command: String, workdir: String = "/data/data/com.termux/files/home") {
+    override fun executeCommandNoResult(command: String, workdir: String) {
         sendToTermux(command, workdir)
     }
 
