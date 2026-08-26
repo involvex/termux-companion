@@ -7,6 +7,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -21,8 +22,13 @@ import androidx.navigation.navArgument
 import com.termux.companion.R
 import com.termux.companion.ui.editor.EditorScreen
 import com.termux.companion.ui.explorer.FileExplorerScreen
+import com.termux.companion.ui.history.HistoryScreen
 import com.termux.companion.ui.settings.SettingsScreen
 import com.termux.companion.ui.terminal.TerminalScreen
+
+object PendingCommandKey {
+    const val REUSED_COMMAND = "reused_command"
+}
 
 @Composable
 fun AppNavHost() {
@@ -57,8 +63,31 @@ fun AppNavHost() {
             startDestination = Screen.Terminal.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Terminal.route) {
-                TerminalScreen()
+            composable(Screen.Terminal.route) { entry ->
+                val pendingCommand = entry.savedStateHandle
+                    .getStateFlow(PendingCommandKey.REUSED_COMMAND, "")
+                    .collectAsState().value
+                    .takeIf { it.isNotEmpty() }
+                TerminalScreen(
+                    onOpenHistory = {
+                        navController.navigate(Screen.History.route)
+                    },
+                    pendingCommand = pendingCommand,
+                    onPendingCommandConsumed = {
+                        entry.savedStateHandle[PendingCommandKey.REUSED_COMMAND] = ""
+                    }
+                )
+            }
+            composable(Screen.History.route) {
+                HistoryScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onUseCommand = { command ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(PendingCommandKey.REUSED_COMMAND, command)
+                        navController.popBackStack()
+                    }
+                )
             }
             composable(Screen.Files.route) {
                 FileExplorerScreen(

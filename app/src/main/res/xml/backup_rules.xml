@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pre-Android-12 backup rules. DataStore preferences may contain encrypted API
+    keys and wallet-mode state, so they never leave the device.
+-->
+<full-backup-content>
+    <exclude domain="file" path="datastore/app_settings.preferences_pb" />
+</full-backup-content>

@@ -81,6 +81,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setAiModel(model) }
     }
 
+    fun setBiometricLock(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setBiometricLock(enabled) }
+    }
+
     fun toggleWalletMode(enabled: Boolean) {
         viewModelScope.launch {
             when (val result = securityRepository.setWalletMode(enabled)) {

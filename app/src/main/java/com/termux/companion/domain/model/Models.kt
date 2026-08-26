@@ -42,5 +42,6 @@ data class AppSettings(
     val zenApiKey: String = "",
     val zenApiEndpoint: String = "https://api.openai.com/v1/chat/completions",
     val aiModel: String = "gpt-3.5-turbo",
-    val walletModeActive: Boolean = false
+    val walletModeActive: Boolean = false,
+    val biometricLock: Boolean = false
 )

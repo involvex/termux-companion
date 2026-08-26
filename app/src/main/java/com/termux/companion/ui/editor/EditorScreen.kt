@@ -39,9 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,8 +60,27 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
     val isLoading by viewModel.isLoading.collectAsState()
     val hasUnsavedChanges by viewModel.hasUnsavedChanges.collectAsState()
     val error by viewModel.error.collectAsState()
+    val searchState by viewModel.searchState.collectAsState()
+    val selectionRequest by viewModel.selectionRequest.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showSearch by remember { mutableStateOf(false) }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(content)) }
+
+    LaunchedEffect(content) {
+        if (textFieldValue.text != content) {
+            textFieldValue = textFieldValue.copy(text = content)
+        }
+    }
+
+    LaunchedEffect(selectionRequest) {
+        selectionRequest?.let { request ->
+            textFieldValue = textFieldValue.copy(
+                text = viewModel.content.value,
+                selection = TextRange(request.start, request.end)
+            )
+            viewModel.consumeSelectionRequest()
+        }
+    }
 
     LaunchedEffect(error) {
         error?.let { snackbarHostState.showSnackbar(it) }
@@ -127,9 +148,19 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (showSearch) {
-                            SearchBar(
-                                onSearch = { viewModel.search(it) },
-                                onDismiss = { showSearch = false }
+                            SearchPanel(
+                                state = searchState,
+                                onQueryChange = { viewModel.search(it) },
+                                onNext = viewModel::nextMatch,
+                                onPrevious = viewModel::previousMatch,
+                                onReplaceAll = { replacement ->
+                                    viewModel.replaceAll(searchState.query, replacement)
+                                },
+                                onGoToLine = viewModel::goToLine,
+                                onDismiss = {
+                                    showSearch = false
+                                    viewModel.clearSearch()
+                                }
                             )
                         }
 
@@ -157,8 +188,11 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
                             }
 
                             BasicTextField(
-                                value = content,
-                                onValueChange = { viewModel.updateContent(it) },
+                                value = textFieldValue,
+                                onValueChange = { updated ->
+                                    textFieldValue = updated
+                                    viewModel.updateContent(updated.text)
+                                },
                                 modifier = Modifier
                                     .weight(1f)
                                     .verticalScroll(verticalScrollState)
@@ -194,29 +228,3 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
     }
 }
 
-@Composable
-private fun SearchBar(
-    onSearch: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var query by remember { mutableStateOf("") }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                onSearch(it)
-            },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            placeholder = { Text("Search...") },
-            textStyle = TextStyle(fontSize = 14.sp)
-        )
-    }
-}

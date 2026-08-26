@@ -63,7 +63,12 @@ import com.termux.companion.ui.components.ConnectionStatusBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TerminalScreen(viewModel: TerminalViewModel = hiltViewModel()) {
+fun TerminalScreen(
+    onOpenHistory: () -> Unit = {},
+    pendingCommand: String? = null,
+    onPendingCommandConsumed: () -> Unit = {},
+    viewModel: TerminalViewModel = hiltViewModel()
+) {
     val outputLines by viewModel.outputLines.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val isExecuting by viewModel.isExecuting.collectAsState()
@@ -72,6 +77,13 @@ fun TerminalScreen(viewModel: TerminalViewModel = hiltViewModel()) {
     var showMenu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(pendingCommand) {
+        if (pendingCommand != null) {
+            commandInput = pendingCommand
+            onPendingCommandConsumed()
+        }
+    }
 
     LaunchedEffect(outputLines.size) {
         if (outputLines.isNotEmpty()) {
@@ -94,6 +106,9 @@ fun TerminalScreen(viewModel: TerminalViewModel = hiltViewModel()) {
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    IconButton(onClick = onOpenHistory) {
+                        Icon(Icons.Default.History, contentDescription = "Command history")
                     }
                     Box {
                         IconButton(onClick = { showMenu = true }) {

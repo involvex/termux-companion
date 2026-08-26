@@ -111,6 +111,26 @@ class TermuxCommandExecutor @Inject constructor(
         sendToTermux(command, workdir)
     }
 
+    /**
+     * Deletes orphaned `tc-out-*`/`tc-done-*` files left in shared Downloads by
+     * killed processes or cancelled polls (FIX-008). Safe to call at startup —
+     * any file older than [maxAgeMs] cannot belong to a live poll.
+     */
+    fun sweepStaleResultFiles(maxAgeMs: Long = 60 * 60 * 1000L) {
+        try {
+            val cutoff = System.currentTimeMillis() - maxAgeMs
+            val stale = getDownloadDir().listFiles { file ->
+                (file.name.startsWith("tc-out-") || file.name.startsWith("tc-done-")) &&
+                    file.isFile && file.lastModified() < cutoff
+            } ?: return
+            stale.forEach { file ->
+                if (file.delete()) Log.i(TAG, "Swept stale result file: ${file.name}")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Temp-file sweep skipped: ${e.message}")
+        }
+    }
+
     private fun sendToTermux(command: String, workdir: String) {
         val intent = Intent().apply {
             setClassName(TERMUX_PACKAGE, RUN_COMMAND_SERVICE)
@@ -121,7 +141,18 @@ class TermuxCommandExecutor @Inject constructor(
             putExtra(EXTRA_BACKGROUND, true)
             putExtra(EXTRA_SESSION_ACTION, "0")
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
-        else context.startService(intent)
+        // Android 12+ forbids foreground-service starts while the app is in the
+        // background (e.g. widget taps); fall back to a plain start and never crash.
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
+            else context.startService(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "startForegroundService rejected (${e.message}); retrying via startService")
+            try {
+                context.startService(intent)
+            } catch (fallback: Exception) {
+                Log.e(TAG, "Unable to deliver command to Termux: ${fallback.message}")
+            }
+        }
     }
 }

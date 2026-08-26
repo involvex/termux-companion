@@ -45,11 +45,11 @@ class AISuggestionService @Inject constructor() {
                 .post(requestBody)
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext emptyList()
-
-            val responseBody = response.body?.string() ?: return@withContext emptyList()
-            parseResponse(responseBody)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext emptyList()
+                val responseBody = response.body?.string() ?: return@withContext emptyList()
+                parseResponse(responseBody)
+            }
         } catch (e: Exception) {
             emptyList()
         }
@@ -62,22 +62,29 @@ Example: [{"command": "ls -la", "description": "List all files with details"}]
 Keep suggestions practical and relevant to Linux/Termux commands."""
     }
 
-    private fun buildRequestBody(prompt: String, model: String): okhttp3.RequestBody {
-        val json = """
-        {
-            "model": "$model",
-            "messages": [
-                {"role": "system", "content": "You are a helpful terminal assistant. Provide concise command suggestions."},
-                {"role": "user", "content": "$prompt"}
-            ],
-            "max_tokens": 200,
-            "temperature": 0.3
-        }
-        """.trimIndent()
-        return json.toRequestBody("application/json".toMediaType())
+    internal data class ChatMessage(val role: String, val content: String)
+
+    internal data class ChatRequest(
+        val model: String,
+        val messages: List<ChatMessage>,
+        val max_tokens: Int,
+        val temperature: Double
+    )
+
+    internal fun buildRequestBody(prompt: String, model: String): okhttp3.RequestBody {
+        val request = ChatRequest(
+            model = model,
+            messages = listOf(
+                ChatMessage("system", "You are a helpful terminal assistant. Provide concise command suggestions."),
+                ChatMessage("user", prompt)
+            ),
+            max_tokens = 200,
+            temperature = 0.3
+        )
+        return gson.toJson(request).toRequestBody("application/json".toMediaType())
     }
 
-    private fun parseResponse(responseBody: String): List<AutocompleteSuggestion> {
+    internal fun parseResponse(responseBody: String): List<AutocompleteSuggestion> {
         return try {
             val json = JsonParser.parseString(responseBody).asJsonObject
             val choices = json.getAsJsonArray("choices")
@@ -110,7 +117,7 @@ Keep suggestions practical and relevant to Linux/Termux commands."""
         }
     }
 
-    private fun extractJsonArrayFromText(text: String): JsonArray? {
+    internal fun extractJsonArrayFromText(text: String): JsonArray? {
         val start = text.indexOf("[")
         val end = text.lastIndexOf("]")
         if (start == -1 || end == -1 || start >= end) return null

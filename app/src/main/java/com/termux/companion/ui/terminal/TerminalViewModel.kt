@@ -67,7 +67,7 @@ class TerminalViewModel @Inject constructor(
 
     init {
         checkConnection()
-        loadHistory()
+        observeHistory()
         viewModelScope.launch {
             commandAutocomplete.loadCommands()
         }
@@ -81,10 +81,11 @@ class TerminalViewModel @Inject constructor(
         }
     }
 
-    private fun loadHistory() {
+    private fun observeHistory() {
         viewModelScope.launch {
-            val history = commandHistoryDao.getRecentCommands(50)
-            _commandHistory.value = history.map { it.command }
+            commandHistoryDao.observeRecentCommands(50).collect { history ->
+                _commandHistory.value = history.map { it.command }
+            }
         }
     }
 
@@ -107,14 +108,12 @@ class TerminalViewModel @Inject constructor(
         _isExecuting.value = true
 
         viewModelScope.launch {
-            commandHistoryDao.insert(
+            commandHistoryDao.recordCommand(
                 CommandHistoryEntity(
                     command = command,
                     timestamp = System.currentTimeMillis()
                 )
             )
-            commandHistoryDao.incrementUseCount(command)
-            loadHistory()
         }
 
         commandJob?.cancel()

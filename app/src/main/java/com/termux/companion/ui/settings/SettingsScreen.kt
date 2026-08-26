@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.termux.companion.BuildConfig
 import com.termux.companion.data.security.SecurityCapabilities
 import com.termux.companion.ui.components.ConnectedIndicator
 
@@ -196,6 +197,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
             SettingsSection(title = "Security") {
                 SwitchPreference(
+                    title = "Biometric App Lock",
+                    description = "Require fingerprint, face, or device credential to open the app",
+                    checked = settings.biometricLock,
+                    onCheckedChange = viewModel::setBiometricLock
+                )
+                SwitchPreference(
                     title = "Google Wallet / Security Mode",
                     description = "Temporarily disables ADB, Accessibility services, and Shizuku to pass Play Integrity checks. " +
                         securityStatusText(capabilities),
@@ -209,7 +216,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             SettingsSection(title = "About") {
                 ListItem(
                     headlineContent = { Text("App Version") },
-                    supportingContent = { Text("1.0.0") }
+                    supportingContent = { Text(BuildConfig.VERSION_NAME) }
                 )
                 ListItem(
                     headlineContent = { Text("Termux Package") },

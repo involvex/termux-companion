@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.ui.navigation.EditorFile
+import com.termux.companion.utils.SearchUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -13,6 +14,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class EditorSearchState(
+    val query: String = "",
+    val matchCount: Int = 0,
+    val currentIndex: Int = -1
+)
+
+data class SelectionRequest(val start: Int, val end: Int)
 
 @HiltViewModel
 class EditorViewModel @Inject constructor(
@@ -43,6 +52,12 @@ class EditorViewModel @Inject constructor(
     private val undoStack = mutableListOf<String>()
     private val redoStack = mutableListOf<String>()
     private var pendingJob: Job? = null
+
+    private val _searchState = MutableStateFlow(EditorSearchState())
+    val searchState: StateFlow<EditorSearchState> = _searchState.asStateFlow()
+
+    private val _selectionRequest = MutableStateFlow<SelectionRequest?>(null)
+    val selectionRequest: StateFlow<SelectionRequest?> = _selectionRequest.asStateFlow()
 
     init {
         savedStateHandle.get<String>(EditorFile.ARG_FILE_PATH)?.takeIf { it.isNotBlank() }?.let {
@@ -78,6 +93,7 @@ class EditorViewModel @Inject constructor(
                         _hasUnsavedChanges.value = false
                         undoStack.clear()
                         redoStack.clear()
+                        clearSearch()
                     } else {
                         _error.value = stdout.ifBlank { stderr.ifBlank { "Failed to read file" } }
                     }
@@ -99,6 +115,7 @@ class EditorViewModel @Inject constructor(
             redoStack.clear()
             _content.value = newContent
             _hasUnsavedChanges.value = newContent != _originalContent.value
+            refreshMatches()
         }
     }
 
@@ -146,7 +163,67 @@ class EditorViewModel @Inject constructor(
     }
 
     fun search(query: String) {
-        // Simple search - could be enhanced with highlighting
+        val offsets = SearchUtils.findMatches(_content.value, query)
+        val current = if (offsets.isEmpty()) -1 else 0
+        _searchState.value = EditorSearchState(query, offsets.size, current)
+        requestSelectionFor(current)
+    }
+
+    fun nextMatch() = stepMatch(1)
+
+    fun previousMatch() = stepMatch(-1)
+
+    private fun stepMatch(delta: Int) {
+        val state = _searchState.value
+        if (state.matchCount == 0) return
+        val next = ((state.currentIndex + delta) + state.matchCount) % state.matchCount
+        _searchState.value = state.copy(currentIndex = next)
+        requestSelectionFor(next)
+    }
+
+    private fun refreshMatches() {
+        val state = _searchState.value
+        if (state.query.isEmpty()) return
+        val offsets = SearchUtils.findMatches(_content.value, state.query)
+        val current = when {
+            offsets.isEmpty() -> -1
+            state.currentIndex in offsets.indices -> state.currentIndex
+            else -> 0
+        }
+        _searchState.value = state.copy(matchCount = offsets.size, currentIndex = current)
+    }
+
+    /** Case-insensitive replace-all; undoable via the normal undo stack. */
+    fun replaceAll(query: String, replacement: String) {
+        if (query.isEmpty()) return
+        val regex = Regex(Regex.escape(query), RegexOption.IGNORE_CASE)
+        updateContent(_content.value.replace(regex) { replacement })
+        search(query)
+    }
+
+    fun goToLine(line: Int) {
+        val target = line.coerceIn(1, SearchUtils.totalLines(_content.value))
+        val start = SearchUtils.offsetOfLineStart(_content.value, target)
+        val end = _content.value.indexOf('\n', startIndex = start).let {
+            if (it == -1 || it > _content.value.length) _content.value.length else it
+        }.coerceAtLeast(start)
+        _selectionRequest.value = SelectionRequest(start, end)
+    }
+
+    private fun requestSelectionFor(matchIndex: Int) {
+        val query = _searchState.value.query
+        if (query.isEmpty() || matchIndex < 0) return
+        val offset = SearchUtils.findMatches(_content.value, query).getOrNull(matchIndex) ?: return
+        _selectionRequest.value = SelectionRequest(offset, offset + query.length)
+    }
+
+    fun consumeSelectionRequest() {
+        _selectionRequest.value = null
+    }
+
+    fun clearSearch() {
+        _searchState.value = EditorSearchState()
+        _selectionRequest.value = null
     }
 
     fun detectLanguage(): String {

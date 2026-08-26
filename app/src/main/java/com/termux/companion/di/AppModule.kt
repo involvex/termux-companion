@@ -6,6 +6,7 @@ import com.termux.companion.data.ai.AISuggestionService
 import com.termux.companion.data.ai.CommandAutocomplete
 import com.termux.companion.data.db.AppDatabase
 import com.termux.companion.data.db.CommandHistoryDao
+import com.termux.companion.data.security.CryptoStore
 import com.termux.companion.data.security.SecurityRepository
 import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.data.termux.TermuxCommandExecutor
@@ -29,7 +30,7 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "termux_companion.db"
-        ).build()
+        ).addMigrations(AppDatabase.MIGRATION_1_2).build()
     }
 
     @Provides
@@ -40,8 +41,15 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository {
-        return SettingsRepository(context)
+    fun provideCryptoStore(): CryptoStore = CryptoStore()
+
+    @Provides
+    @Singleton
+    fun provideSettingsRepository(
+        @ApplicationContext context: Context,
+        cryptoStore: CryptoStore
+    ): SettingsRepository {
+        return SettingsRepository(context, cryptoStore)
     }
 
     @Provides

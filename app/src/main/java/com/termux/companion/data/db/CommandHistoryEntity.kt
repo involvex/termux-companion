@@ -2,9 +2,13 @@ package com.termux.companion.data.db
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "command_history")
+@Entity(
+    tableName = "command_history",
+    indices = [Index(value = ["command"], unique = true)]
+)
 data class CommandHistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

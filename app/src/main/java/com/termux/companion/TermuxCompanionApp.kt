@@ -7,6 +7,10 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 @HiltAndroidApp
 class TermuxCompanionApp : Application() {
@@ -18,6 +22,15 @@ class TermuxCompanionApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // Clean up orphaned result files from previous sessions (FIX-008).
+        val executor = EntryPointAccessors.fromApplication(
+            this,
+            TermuxCommandExecutorEntryPoint::class.java
+        ).termuxCommandExecutor()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            executor.sweepStaleResultFiles()
+        }
     }
 }
 
