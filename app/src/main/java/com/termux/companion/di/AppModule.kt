@@ -12,6 +12,7 @@ import com.termux.companion.data.settings.SettingsRepository
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.data.termux.TermuxCommandRunner
 import com.termux.companion.data.termux.TermuxDiagnosticsChecker
+import com.termux.companion.data.widget.WidgetSettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -93,5 +94,11 @@ object AppModule {
         termuxCommandExecutor: TermuxCommandExecutor
     ): SecurityRepository {
         return SecurityRepository(context, settingsRepository, termuxCommandExecutor)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWidgetSettingsRepository(@ApplicationContext context: Context): WidgetSettingsRepository {
+        return WidgetSettingsRepository(context)
     }
 }

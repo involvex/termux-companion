@@ -49,6 +49,7 @@ feature suggestions with impact/effort/confidence ratings.
 | NEW-003 | Cancelled jobs leak temp files & duplicate timeout logic | Replaced callback plumbing with a single suspend API `TermuxCommandRunner.execute(command, workdir, timeoutMs): CommandResult`. Timeout enforcement lives inside the executor (`finally` sweeps `tc-*` files on success, timeout, AND cancellation); the three duplicated VM delay-timers are gone; closure-capture patterns in explorer/security deleted. Per-site timeouts preserved: terminal 15 s, explorer/editor 10 s, su steps 15 s. |
 | FEAT-024 | Centralize timeout/result plumbing | Completed by the NEW-003 rework: one suspend entry point returns `CommandResult`; callback gymnastics removed from all five call sites. |
 | FIX-004 | Diagnostics always fail | The broken `Runtime.exec` grep of Termux's private dir is gone. `TermuxDiagnosticsChecker.check()` (now suspend) probes `allow-external-apps` through the executor's suspend API and also reports shared-storage access; surfaced via "Run diagnostics" in Settings ▸ Connection with per-check ✓/✗ lines and actionable issue text. |
+| FEAT-004 | Configurable home-screen widgets | Shipped: `WidgetSettingsRepository` (per-widget command/label in DataStore, keyed by appWidgetId; excluded from backup), `WidgetConfigActivity` declared via `APPWIDGET_CONFIGURE` with free-text command + optional button label + recent-history picker (30 entries from Room). Provider now renders stored labels, routes clicks carrying only the widget id (never the command), purges config in `onDeleted`, and refreshes asynchronously via `goAsync()` — no more hardcoded `ls -la` TODO. |
 
 ---
 
@@ -65,7 +66,6 @@ feature suggestions with impact/effort/confidence ratings.
 
 | ID | Status | Category | Suggestion | Current State → Improvement | Impact | Effort | Confidence |
 |----|--------|----------|-----------|------------------------------|--------|--------|------------|
-| FEAT-004 | Open | Feature | **Configurable home-screen widgets** | `widget/TermuxWidgetProvider.kt:51` — hardcoded `DEFAULT_COMMAND = "ls -la"` with `// TODO: Make configurable`. Add a widget config Activity (declared with `APPWIDGET_CONFIGURE`) letting users pick a command per widget (from history/snippets/free text), optional label/color. Persist per-widget settings keyed by `appWidgetId` in DataStore. Also use `PendingIntent.getForegroundService()` so background taps don't rely on the NEW-001 fallback. | High | Medium | 90% |
 | FEAT-006 | Open | UX | **Terminal quick-keys row** | Input bar lacks Tab/Esc/Ctrl/arrows — essential for mobile terminals. Add a toggleable strip above the keyboard sending `\t`, ESC, arrow-key history recall from `_commandHistory`, and `\|`, `-`, `/` chips. Control chars need session semantics — document constraints. | High | Medium | 85% |
 | FEAT-007 | Open | Feature | **Run script / execute selection from Editor** | Editor can save but not execute. Add a "Run" action: `bash "<path>"` via executor with an inline output panel (reuse `TerminalOutput` model). Natural pairing with FEAT-003 (now shipped). | High | Low-Med | 90% |
 | FEAT-008 | 🔶 Partial | Quality | **Unit test suite for pure logic** | 5 test files now exist (`ShellUtilsTest`, `SecurityCommandBuilderTest`, `FileExplorerViewModelTest`, + QB additions `SearchUtilsTest`, `AISuggestionServiceTest`). Still untested: `parseLsOutput()` extraction from the explorer VM. | High | Low-Med | 100% |
@@ -76,7 +76,7 @@ feature suggestions with impact/effort/confidence ratings.
 
 | ID | Status | Category | Suggestion | Current State → Improvement | Impact | Effort | Confidence |
 |----|--------|----------|-----------|------------------------------|--------|--------|------------|
-| FEAT-009 | Open | Feature | **Snippets manager** | Named snippets (Room entity #2 — bump DB version w/ migration; note DB is now at v2), snippet picker in terminal toolbar, reuse in widgets (FEAT-004). | Med-High | Medium | 90% |
+| FEAT-009 | Open | Feature | **Snippets manager** | Named snippets (Room entity #2 — bump DB version w/ migration; note DB is now at v2), snippet picker in terminal toolbar, reuse in widgets (widget infra now supports any source via config activity). | Med-High | Medium | 90% |
 | FEAT-010 | Open | UX | **ANSI color rendering in terminal output** | Output is plain `Text`; parse basic SGR sequences into spans. Cap `_outputLines` growth and cap executor read size (`resultFile.readText()` reads whole file into memory). | Medium | Medium | 85% |
 | FEAT-011 | Open | Reliability | **Persist terminal transcript & restore sessions** | Output lives only in `MutableStateFlow` — lost on process death. Persist transcript to Room or log file; offer "restore last session". | Medium | Medium | 85% |
 | FEAT-012 | 🔶 Partial | Feature | **Real connection diagnostics surface** | Checker is now live and probeable via Settings ▸ Connection (FIX-004). Remaining: a dedicated full-screen diagnostics view with step-by-step fix flows for each failed check. | Medium | Low | 90% |
@@ -102,7 +102,7 @@ feature suggestions with impact/effort/confidence ratings.
 ## Priority Reasoning
 
 - **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FEAT-007 run-from-editor and FEAT-004 widget config (both ride the stable suspend executor); FEAT-012's dedicated diagnostics screen. All foundation fixes (FIX/NEW) are resolved as of 2026-08-26.
+- **Next natural targets**: FEAT-007 run-from-editor and FEAT-006 quick-keys row; FEAT-012's dedicated diagnostics screen. Foundation fixes (FIX/NEW) and FEAT-002/003/004/005/016/017 are all resolved as of 2026-08-26.
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 

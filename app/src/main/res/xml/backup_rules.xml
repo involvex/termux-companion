@@ -5,4 +5,5 @@
 -->
 <full-backup-content>
     <exclude domain="file" path="datastore/app_settings.preferences_pb" />
+    <exclude domain="file" path="datastore/widget_settings.preferences_pb" />
 </full-backup-content>

@@ -2,6 +2,7 @@ package com.termux.companion
 
 import android.app.Application
 import com.termux.companion.data.termux.TermuxCommandExecutor
+import com.termux.companion.data.widget.WidgetSettingsRepository
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -38,4 +39,5 @@ class TermuxCompanionApp : Application() {
 @InstallIn(SingletonComponent::class)
 interface TermuxCommandExecutorEntryPoint {
     fun termuxCommandExecutor(): TermuxCommandExecutor
+    fun widgetSettingsRepository(): WidgetSettingsRepository
 }

@@ -3,110 +3,129 @@ package com.termux.companion.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.widget.RemoteViews
 import com.termux.companion.R
 import com.termux.companion.TermuxCommandExecutorEntryPoint
-import com.termux.companion.data.termux.TermuxCommandExecutor
+import com.termux.companion.data.widget.WidgetSettingsRepository
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+internal const val ACTION_WIDGET_CLICK = "com.termux.companion.widget.ACTION_WIDGET_CLICK"
+internal const val EXTRA_WIDGET_ID = "appWidgetId"
+internal const val DEFAULT_COMMAND = "ls -la"
+internal const val DEFAULT_LABEL = "Terminal"
+
+/** Reads the stored config and pushes fresh RemoteViews for one widget instance. */
+internal suspend fun refreshWidget(context: Context, appWidgetId: Int) {
+    val manager = AppWidgetManager.getInstance(context) ?: return
+    if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+
+    val repository = entryPoint(context).widgetSettingsRepository()
+    val config = runCatching { repository.getConfig(appWidgetId) }.getOrNull()
+
+    val views = RemoteViews(context.packageName, R.layout.widget_termux)
+    views.setTextViewText(R.id.widget_button, config?.label?.ifBlank { null } ?: DEFAULT_LABEL)
+    views.setOnClickPendingIntent(R.id.widget_button, clickPendingIntent(context, appWidgetId))
+    manager.updateAppWidget(appWidgetId, views)
+}
+
+private fun clickPendingIntent(context: Context, appWidgetId: Int): PendingIntent {
+    val intent = Intent(context, TermuxWidgetProvider::class.java).apply {
+        action = ACTION_WIDGET_CLICK
+        putExtra(EXTRA_WIDGET_ID, appWidgetId)
+    }
+    return PendingIntent.getBroadcast(
+        context,
+        appWidgetId,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+}
+
+private fun entryPoint(context: Context): TermuxCommandExecutorEntryPoint =
+    EntryPointAccessors.fromApplication(context.applicationContext, TermuxCommandExecutorEntryPoint::class.java)
 
 /**
- * AppWidgetProvider for Termux Companion that allows executing commands from the home screen.
+ * Home-screen widget executing a user-configured command (FEAT-004).
+ * Per-widget command/label live in [WidgetSettingsRepository]; the click
+ * broadcast carries only the widget id, never the command itself.
  */
 class TermuxWidgetProvider : AppWidgetProvider() {
 
-    companion object {
-        private const val ACTION_WIDGET_CLICK = "com.termux.companion.widget.ACTION_WIDGET_CLICK"
-        private const val EXTRA_WIDGET_ID = "appWidgetId"
-        private const val EXTRA_COMMAND = "command"
-        private const val DEFAULT_COMMAND = "ls -la"
-    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        // Update each widget instance
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+            updateAsync(context, appWidgetId)
         }
         super.onUpdate(context, appWidgetManager, appWidgetIds)
     }
 
-    private fun updateAppWidget(
+    override fun onAppWidgetOptionsChanged(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetId: Int
+        appWidgetId: Int,
+        newOptions: Bundle?
     ) {
-        // Create the RemoteViews for the widget layout
-        val views = RemoteViews(context.packageName, R.layout.widget_termux)
-
-        // Set up the click intent for the widget button
-        val clickIntent = Intent(context, TermuxWidgetProvider::class.java).apply {
-            action = ACTION_WIDGET_CLICK
-            putExtra(EXTRA_WIDGET_ID, appWidgetId)
-            putExtra(EXTRA_COMMAND, DEFAULT_COMMAND) // TODO: Make configurable
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            appWidgetId,
-            clickIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        views.setOnClickPendingIntent(R.id.widget_button, pendingIntent)
-
-        // Instruct the widget manager to update the widget
-        appWidgetManager.updateAppWidget(appWidgetId, views)
+        updateAsync(context, appWidgetId)
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_WIDGET_CLICK) {
-            val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-            val command = intent.getStringExtra(EXTRA_COMMAND) ?: DEFAULT_COMMAND
+        if (intent.action != ACTION_WIDGET_CLICK) return
 
-            if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                // Get the TermuxCommandExecutor via Hilt entry point
-                val executor = EntryPointAccessors.fromApplication(
-                    context,
-                    TermuxCommandExecutorEntryPoint::class.java
-                ).termuxCommandExecutor()
+        val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
 
-                // Execute the command in Termux (no result needed for widget)
-                executor.executeCommandNoResult(
-                    command = command,
-                    workdir = "/data/data/com.termux/files/home"
-                )
+        val pendingResult = goAsync()
+        scope.launch {
+            try {
+                val repository = entryPoint(context).widgetSettingsRepository()
+                val command = runCatching { repository.getConfig(appWidgetId)?.command }
+                    .getOrNull()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: DEFAULT_COMMAND
+
+                entryPoint(context).termuxCommandExecutor().executeCommandNoResult(command = command)
+            } finally {
+                pendingResult.finish()
             }
         }
     }
 
-    /**
-     * Called when widgets are deleted. We don't need to do anything special here.
-     */
-    override fun onDeleted(
-        context: Context,
-        appWidgetIds: IntArray
-    ) {
+    /** Purges per-widget keys so DataStore never accumulates stale entries. */
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        val pendingResult = goAsync()
+        scope.launch {
+            try {
+                val repository = entryPoint(context).widgetSettingsRepository()
+                appWidgetIds.forEach { id -> runCatching { repository.clear(id) } }
+            } finally {
+                pendingResult.finish()
+            }
+        }
         super.onDeleted(context, appWidgetIds)
     }
 
-    /**
-     * Called when the first widget is created.
-     */
-    override fun onEnabled(context: Context) {
-        super.onEnabled(context)
-    }
-
-    /**
-     * Called when the last widget is deleted.
-     */
-    override fun onDisabled(context: Context) {
-        super.onDisabled(context)
+    private fun updateAsync(context: Context, appWidgetId: Int) {
+        val pendingResult = goAsync()
+        scope.launch {
+            try {
+                refreshWidget(context.applicationContext, appWidgetId)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 }

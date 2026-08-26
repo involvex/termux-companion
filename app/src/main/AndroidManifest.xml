@@ -38,6 +38,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.widgetconfig.WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TermuxCompanion">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
