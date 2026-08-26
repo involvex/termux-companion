@@ -7,6 +7,8 @@ import com.termux.companion.data.security.SecurityRepository
 import com.termux.companion.data.security.StepOutcome
 import com.termux.companion.data.security.WalletToggleResult
 import com.termux.companion.data.settings.SettingsRepository
+import com.termux.companion.data.termux.TermuxDiagnostics
+import com.termux.companion.data.termux.TermuxDiagnosticsChecker
 import com.termux.companion.domain.model.AppSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,7 +24,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val securityRepository: SecurityRepository
+    private val securityRepository: SecurityRepository,
+    private val diagnosticsChecker: TermuxDiagnosticsChecker
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
@@ -32,6 +35,12 @@ class SettingsViewModel @Inject constructor(
         SecurityCapabilities(hasWriteSecureSettings = false, isTermuxInstalled = false, isRooted = null)
     )
     val securityCapabilities: StateFlow<SecurityCapabilities> = _securityCapabilities.asStateFlow()
+
+    private val _diagnostics = MutableStateFlow<TermuxDiagnostics?>(null)
+    val diagnostics: StateFlow<TermuxDiagnostics?> = _diagnostics.asStateFlow()
+
+    private val _isDiagnosing = MutableStateFlow(false)
+    val isDiagnosing: StateFlow<Boolean> = _isDiagnosing.asStateFlow()
 
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent = _snackbarEvent.asSharedFlow()
@@ -46,6 +55,19 @@ class SettingsViewModel @Inject constructor(
     fun refreshSecurityCapabilities() {
         viewModelScope.launch {
             _securityCapabilities.value = securityRepository.getCapabilities()
+        }
+    }
+
+    fun runDiagnostics() {
+        if (_isDiagnosing.value) return
+        viewModelScope.launch {
+            _isDiagnosing.value = true
+            _diagnostics.value = try {
+                diagnosticsChecker.check()
+            } catch (e: Exception) {
+                null
+            }
+            _isDiagnosing.value = false
         }
     }
 

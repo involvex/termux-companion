@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -47,6 +50,8 @@ import com.termux.companion.ui.components.ConnectedIndicator
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsState()
     val capabilities by viewModel.securityCapabilities.collectAsState()
+    val diagnostics by viewModel.diagnostics.collectAsState()
+    val isDiagnosing by viewModel.isDiagnosing.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboard = LocalClipboardManager.current
     var setupCommand by remember { mutableStateOf<String?>(null) }
@@ -191,6 +196,51 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     headlineContent = { Text("Termux Status") },
                     trailingContent = { ConnectedIndicator() }
                 )
+                if (isDiagnosing) {
+                    ListItem(
+                        headlineContent = { Text("Running diagnostics…") },
+                        trailingContent = {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    )
+                } else {
+                    TextButton(
+                        onClick = viewModel::runDiagnostics,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        Text(if (diagnostics == null) "Run diagnostics" else "Re-run diagnostics")
+                    }
+                }
+                diagnostics?.let { d ->
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        DiagnosticsLine("Termux installed", d.isInstalled)
+                        DiagnosticsLine("RUN_COMMAND permission", d.hasPermission)
+                        DiagnosticsLine(
+                            "allow-external-apps",
+                            d.allowExternalApps,
+                            skip = !d.isInstalled || !d.hasPermission || !d.storageAccess
+                        )
+                        DiagnosticsLine("Shared storage access", d.storageAccess)
+                        if (d.versionName != null) {
+                            Text(
+                                text = "Termux version: ${d.versionName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        d.issues.forEach { issue ->
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "⚠ $issue",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
             }
 
             HorizontalDivider()
@@ -258,6 +308,27 @@ private fun SwitchPreference(
                 checked = checked,
                 onCheckedChange = onCheckedChange
             )
+        }
+    )
+}
+
+@Composable
+private fun DiagnosticsLine(
+    label: String,
+    ok: Boolean,
+    skip: Boolean = false
+) {
+    Text(
+        text = when {
+            skip -> "• $label: skipped"
+            ok -> "✓ $label"
+            else -> "✗ $label"
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = when {
+            skip -> MaterialTheme.colorScheme.onSurfaceVariant
+            ok -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.error
         }
     )
 }

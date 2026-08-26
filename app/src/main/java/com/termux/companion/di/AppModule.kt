@@ -78,8 +78,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTermuxDiagnosticsChecker(@ApplicationContext context: Context): TermuxDiagnosticsChecker {
-        return TermuxDiagnosticsChecker(context)
+    fun provideTermuxDiagnosticsChecker(
+        @ApplicationContext context: Context,
+        termuxCommandRunner: TermuxCommandRunner
+    ): TermuxDiagnosticsChecker {
+        return TermuxDiagnosticsChecker(context, termuxCommandRunner)
     }
 
     @Provides

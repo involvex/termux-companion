@@ -48,7 +48,7 @@ class TermuxCommandExecutor @Inject constructor(
         context.checkSelfPermission("com.termux.permission.RUN_COMMAND") ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
 
-    fun canReadSharedStorage(): Boolean {
+    override fun canReadSharedStorage(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return Environment.isExternalStorageManager()
         }

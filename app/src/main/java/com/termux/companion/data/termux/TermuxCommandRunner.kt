@@ -12,6 +12,9 @@ interface TermuxCommandRunner {
     fun isTermuxInstalled(): Boolean
     fun hasRunCommandPermission(): Boolean
 
+    /** Whether this app can read shared storage (required by the file-polling path). */
+    fun canReadSharedStorage(): Boolean
+
     /**
      * Executes [command] via Termux's RUN_COMMAND service and suspends until the
      * result arrives, [timeoutMs] elapses (exit code `-1` + hint in stderr), or

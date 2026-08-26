@@ -48,6 +48,7 @@ feature suggestions with impact/effort/confidence ratings.
 | FIX-005 | Unsafe shell construction in Editor | Editor I/O now rides base64 transport: reads via `base64 <quoted-path>` decoded locally; saves via `printf '%s' '<b64>' \| base64 -d > <quoted-path>` (immune to `TC_EOF`/quotes/newlines), with a 700k-char encoded-size guard against the Binder intent limit (`EditorViewModel.kt`). Codec in `ShellUtils` (strict RFC4648 decode) unit-tested. |
 | NEW-003 | Cancelled jobs leak temp files & duplicate timeout logic | Replaced callback plumbing with a single suspend API `TermuxCommandRunner.execute(command, workdir, timeoutMs): CommandResult`. Timeout enforcement lives inside the executor (`finally` sweeps `tc-*` files on success, timeout, AND cancellation); the three duplicated VM delay-timers are gone; closure-capture patterns in explorer/security deleted. Per-site timeouts preserved: terminal 15 s, explorer/editor 10 s, su steps 15 s. |
 | FEAT-024 | Centralize timeout/result plumbing | Completed by the NEW-003 rework: one suspend entry point returns `CommandResult`; callback gymnastics removed from all five call sites. |
+| FIX-004 | Diagnostics always fail | The broken `Runtime.exec` grep of Termux's private dir is gone. `TermuxDiagnosticsChecker.check()` (now suspend) probes `allow-external-apps` through the executor's suspend API and also reports shared-storage access; surfaced via "Run diagnostics" in Settings ▸ Connection with per-check ✓/✗ lines and actionable issue text. |
 
 ---
 
@@ -55,7 +56,8 @@ feature suggestions with impact/effort/confidence ratings.
 
 | ID | Status | Issue | Location | Detail |
 |----|--------|-------|----------|--------|
-| FIX-004 | Open | **Diagnostics always fail** | `data/termux/TermuxDiagnosticsChecker.kt:44-53` | `Runtime.exec("grep … /data/data/com.termux/…")` reads another app's private dir — always fails without root, so `allowExternalApps` is always reported `false`. Replace with a round-trip probe through the executor's suspend API and verify the result arrives. |
+
+*(No open foundation fixes remain — FIX-001…008 and NEW-001…004 are all resolved or folded into shipped work.)*
 
 ---
 
@@ -77,7 +79,7 @@ feature suggestions with impact/effort/confidence ratings.
 | FEAT-009 | Open | Feature | **Snippets manager** | Named snippets (Room entity #2 — bump DB version w/ migration; note DB is now at v2), snippet picker in terminal toolbar, reuse in widgets (FEAT-004). | Med-High | Medium | 90% |
 | FEAT-010 | Open | UX | **ANSI color rendering in terminal output** | Output is plain `Text`; parse basic SGR sequences into spans. Cap `_outputLines` growth and cap executor read size (`resultFile.readText()` reads whole file into memory). | Medium | Medium | 85% |
 | FEAT-011 | Open | Reliability | **Persist terminal transcript & restore sessions** | Output lives only in `MutableStateFlow` — lost on process death. Persist transcript to Room or log file; offer "restore last session". | Medium | Medium | 85% |
-| FEAT-012 | Open | Feature | **Real connection diagnostics surface** | `TermuxDiagnosticsChecker.check()` is still dead-injected (`AppModule.kt`) and its grep probe is broken (FIX-004). After FIX-004, add a Diagnostics screen with version/probe/storage states and fix instructions. | Medium | Low | 90% |
+| FEAT-012 | 🔶 Partial | Feature | **Real connection diagnostics surface** | Checker is now live and probeable via Settings ▸ Connection (FIX-004). Remaining: a dedicated full-screen diagnostics view with step-by-step fix flows for each failed check. | Medium | Low | 90% |
 | FEAT-013 | Open | Feature | **Package manager UI** | Wrap `pkg list-installed / search / install / uninstall` with confirmations and progress streaming. | Medium | Medium-High | 80% |
 | FEAT-014 | Open | Feature | **Process monitor** | Parse `ps -ef` into a list with CPU/MEM columns and kill action w/ confirm. Pairs with FEAT-013 as a "System" tab. | Medium | Medium | 80% |
 | FEAT-015 | Open | UX | **Explorer bookmarks & client-side filter** | No bookmarks, no filter box, no breadcrumbs. Also `FileExplorerScreen`'s default param `connectionState = ConnectionState.Connected` (`FileExplorerScreen.kt:78`) still masks real state — pass live state like Terminal does. | Medium | Low-Med | 90% |
@@ -100,7 +102,7 @@ feature suggestions with impact/effort/confidence ratings.
 ## Priority Reasoning
 
 - **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FIX-004 diagnostics probe (now trivial on the suspend executor API) + FEAT-012 diagnostics surface, then FEAT-007 run-from-editor and FEAT-004 widget config. NEW-003/FEAT-024 landed 2026-08-26.
+- **Next natural targets**: FEAT-007 run-from-editor and FEAT-004 widget config (both ride the stable suspend executor); FEAT-012's dedicated diagnostics screen. All foundation fixes (FIX/NEW) are resolved as of 2026-08-26.
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 

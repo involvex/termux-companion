@@ -28,6 +28,7 @@ class FileExplorerViewModelTest {
 
         override fun isTermuxInstalled() = installed
         override fun hasRunCommandPermission() = permitted
+        override fun canReadSharedStorage() = true
 
         override suspend fun execute(
             command: String,
