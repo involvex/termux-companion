@@ -58,6 +58,10 @@ class TerminalViewModel @Inject constructor(
     private val _commandHistory = MutableStateFlow<List<String>>(emptyList())
     val commandHistory: StateFlow<List<String>> = _commandHistory.asStateFlow()
 
+    // FEAT-006: chronological history for ↑/↓ recall (use-count ordering is wrong for this)
+    private val recallCommands = MutableStateFlow<List<String>>(emptyList())
+    private val recallBuffer = RecallBuffer()
+
     private val _isExecuting = MutableStateFlow(false)
     val isExecuting: StateFlow<Boolean> = _isExecuting.asStateFlow()
 
@@ -70,6 +74,7 @@ class TerminalViewModel @Inject constructor(
     init {
         checkConnection()
         observeHistory()
+        observeRecallHistory()
         viewModelScope.launch {
             commandAutocomplete.loadCommands()
         }
@@ -91,6 +96,21 @@ class TerminalViewModel @Inject constructor(
         }
     }
 
+    private fun observeRecallHistory() {
+        viewModelScope.launch {
+            commandHistoryDao.observeRecentByTime(100).collect { history ->
+                recallCommands.value = history.map { it.command }
+            }
+        }
+    }
+
+    /** ↑ key: step back through history, preserving the unsent draft. */
+    fun recallOlder(currentInput: String): String? =
+        recallBuffer.older(recallCommands.value, currentInput)
+
+    /** ↓ key: step forward; past the newest entry restores the preserved draft. */
+    fun recallNewer(): String? = recallBuffer.newer(recallCommands.value)
+
     fun executeCommand(command: String) {
         if (command.isBlank()) return
 
@@ -108,6 +128,7 @@ class TerminalViewModel @Inject constructor(
 
         appendOutput("$ $command", isCommand = true)
         _isExecuting.value = true
+        recallBuffer.reset()
 
         viewModelScope.launch {
             commandHistoryDao.recordCommand(

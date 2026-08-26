@@ -30,6 +30,10 @@ interface CommandHistoryDao {
     @Query("SELECT * FROM command_history ORDER BY use_count DESC, timestamp DESC LIMIT :limit")
     fun observeRecentCommands(limit: Int = 50): Flow<List<CommandHistoryEntity>>
 
+    /** Chronological (newest first) ordering — required for ↑/↓ history recall. */
+    @Query("SELECT * FROM command_history ORDER BY timestamp DESC LIMIT :limit")
+    fun observeRecentByTime(limit: Int = 100): Flow<List<CommandHistoryEntity>>
+
     @Query("SELECT * FROM command_history WHERE command LIKE :prefix || '%' ORDER BY use_count DESC, timestamp DESC LIMIT :limit")
     suspend fun searchByPrefix(prefix: String, limit: Int = 10): List<CommandHistoryEntity>
 

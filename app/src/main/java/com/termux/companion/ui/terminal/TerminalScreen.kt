@@ -2,6 +2,8 @@ package com.termux.companion.ui.terminal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -24,6 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +82,7 @@ fun TerminalScreen(
     val suggestions by viewModel.suggestions.collectAsState()
     var commandInput by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
+    var showQuickKeys by rememberSaveable { mutableStateOf(true) }
     val listState = rememberLazyListState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -177,6 +185,18 @@ fun TerminalScreen(
                 }
             }
 
+            if (showQuickKeys) {
+                QuickKeysRow(
+                    onInsert = { commandInput += it },
+                    onRecallUp = {
+                        viewModel.recallOlder(commandInput)?.let { commandInput = it }
+                    },
+                    onRecallDown = {
+                        viewModel.recallNewer()?.let { commandInput = it }
+                    }
+                )
+            }
+
             CommandInputBar(
                 value = commandInput,
                 onValueChange = {
@@ -190,9 +210,77 @@ fun TerminalScreen(
                         keyboardController?.hide()
                     }
                 },
-                enabled = connectionState is ConnectionState.Connected
+                enabled = connectionState is ConnectionState.Connected,
+                quickKeysEnabled = showQuickKeys,
+                onToggleQuickKeys = { showQuickKeys = !showQuickKeys }
             )
         }
+    }
+}
+
+@Composable
+private fun QuickKeysRow(
+    onInsert: (String) -> Unit,
+    onRecallUp: () -> Unit,
+    onRecallDown: () -> Unit
+) {
+    // No persistent PTY exists (one-shot `bash -c` per command), so Esc/Ctrl
+    // modifiers have nothing to attach to; ↑/↓ walk local history instead.
+    val insertTokens = listOf("|", "/", "-", "--", "~/", "$(", "\"", "'", ">")
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        KeyCap(onClick = onRecallUp) {
+            Icon(
+                Icons.Default.KeyboardArrowUp,
+                contentDescription = "Previous command",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        KeyCap(onClick = onRecallDown) {
+            Icon(
+                Icons.Default.KeyboardArrowDown,
+                contentDescription = "Next command",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        insertTokens.forEach { token ->
+            KeyCap(onClick = { onInsert(token) }) {
+                Text(
+                    text = token,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeyCap(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val shape = RoundedCornerShape(6.dp)
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
 
@@ -221,7 +309,9 @@ private fun CommandInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    quickKeysEnabled: Boolean = true,
+    onToggleQuickKeys: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -230,6 +320,14 @@ private fun CommandInputBar(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        IconButton(onClick = onToggleQuickKeys) {
+            Icon(
+                Icons.Default.Keyboard,
+                contentDescription = if (quickKeysEnabled) "Hide quick keys" else "Show quick keys",
+                tint = if (quickKeysEnabled) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
             text = "$",
             style = TextStyle(
