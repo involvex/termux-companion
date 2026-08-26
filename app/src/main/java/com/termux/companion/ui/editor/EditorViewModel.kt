@@ -1,8 +1,10 @@
 package com.termux.companion.ui.editor
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.termux.TermuxCommandExecutor
+import com.termux.companion.ui.navigation.EditorFile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -14,6 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class EditorViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val termuxExecutor: TermuxCommandExecutor
 ) : ViewModel() {
 
@@ -40,6 +43,12 @@ class EditorViewModel @Inject constructor(
     private val undoStack = mutableListOf<String>()
     private val redoStack = mutableListOf<String>()
     private var pendingJob: Job? = null
+
+    init {
+        savedStateHandle.get<String>(EditorFile.ARG_FILE_PATH)?.takeIf { it.isNotBlank() }?.let {
+            openFile(it)
+        }
+    }
 
     fun openFile(path: String) {
         if (!termuxExecutor.isTermuxInstalled()) {

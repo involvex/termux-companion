@@ -60,7 +60,8 @@ import com.termux.companion.ui.terminal.ConnectionState
 @Composable
 fun FileExplorerScreen(
     viewModel: FileExplorerViewModel = hiltViewModel(),
-    connectionState: ConnectionState = ConnectionState.Connected
+    connectionState: ConnectionState = ConnectionState.Connected,
+    onOpenInEditor: (String) -> Unit = {}
 ) {
     val currentPath by viewModel.currentPath.collectAsState()
     val files by viewModel.files.collectAsState()
@@ -151,8 +152,15 @@ fun FileExplorerScreen(
                         items(files, key = { it.path }) { file ->
                             FileListItem(
                                 file = file,
-                                onClick = { viewModel.navigateTo(file) },
-                                onLongClick = {}
+                                onClick = {
+                                    if (file.isDirectory) {
+                                        viewModel.navigateTo(file)
+                                    } else {
+                                        onOpenInEditor(file.path)
+                                    }
+                                },
+                                onLongClick = {},
+                                onEdit = { onOpenInEditor(file.path) }
                             )
                         }
                     }
@@ -167,7 +175,8 @@ fun FileExplorerScreen(
 private fun FileListItem(
     file: FileItem,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onEdit: () -> Unit
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
 
@@ -234,7 +243,10 @@ private fun FileListItem(
             )
             DropdownMenuItem(
                 text = { Text("Edit") },
-                onClick = { showContextMenu = false }
+                onClick = {
+                    showContextMenu = false
+                    onEdit()
+                }
             )
             DropdownMenuItem(
                 text = { Text("Rename") },

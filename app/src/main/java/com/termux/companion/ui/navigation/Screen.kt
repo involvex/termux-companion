@@ -1,5 +1,6 @@
 package com.termux.companion.ui.navigation
 
+import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Folder
@@ -12,6 +13,15 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Files : Screen("files", "Files", Icons.Default.Folder)
     data object Editor : Screen("editor", "Editor", Icons.Default.Create)
     data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+}
+
+object EditorFile {
+    const val ARG_FILE_PATH = "filePath"
+    const val ROUTE = "editor/$ARG_FILE_PATH={$ARG_FILE_PATH}"
+
+    fun createRoute(path: String): String {
+        return "editor/$ARG_FILE_PATH=${Uri.encode(path)}"
+    }
 }
 
 val bottomNavItems = listOf(

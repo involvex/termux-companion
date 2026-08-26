@@ -12,10 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.termux.companion.R
 import com.termux.companion.ui.editor.EditorScreen
 import com.termux.companion.ui.explorer.FileExplorerScreen
@@ -59,7 +61,19 @@ fun AppNavHost() {
                 TerminalScreen()
             }
             composable(Screen.Files.route) {
-                FileExplorerScreen()
+                FileExplorerScreen(
+                    onOpenInEditor = { path ->
+                        navController.navigate(EditorFile.createRoute(path))
+                    }
+                )
+            }
+            composable(
+                route = EditorFile.ROUTE,
+                arguments = listOf(
+                    navArgument(EditorFile.ARG_FILE_PATH) { type = NavType.StringType }
+                )
+            ) {
+                EditorScreen()
             }
             composable(Screen.Editor.route) {
                 EditorScreen()
