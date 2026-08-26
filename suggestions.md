@@ -50,6 +50,7 @@ feature suggestions with impact/effort/confidence ratings.
 | FEAT-024 | Centralize timeout/result plumbing | Completed by the NEW-003 rework: one suspend entry point returns `CommandResult`; callback gymnastics removed from all five call sites. |
 | FIX-004 | Diagnostics always fail | The broken `Runtime.exec` grep of Termux's private dir is gone. `TermuxDiagnosticsChecker.check()` (now suspend) probes `allow-external-apps` through the executor's suspend API and also reports shared-storage access; surfaced via "Run diagnostics" in Settings ▸ Connection with per-check ✓/✗ lines and actionable issue text. |
 | FEAT-004 | Configurable home-screen widgets | Shipped: `WidgetSettingsRepository` (per-widget command/label in DataStore, keyed by appWidgetId; excluded from backup), `WidgetConfigActivity` declared via `APPWIDGET_CONFIGURE` with free-text command + optional button label + recent-history picker (30 entries from Room). Provider now renders stored labels, routes clicks carrying only the widget id (never the command), purges config in `onDeleted`, and refreshes asynchronously via `goAsync()` — no more hardcoded `ls -la` TODO. |
+| FEAT-007 | Run script / execute selection from Editor | Shipped: Play action in the editor top bar runs `bash <quoted-path>` (30 s timeout) through the suspend executor and streams output into an inline collapsible monospace panel (auto-scroll, capped at last 400 lines, exit-code status line). Unsaved changes are auto-saved first via the shared base64 writer (`writeContents`), so the run always reflects the visible buffer; Save now shares the same path. Panel close is disabled while running. |
 
 ---
 
@@ -67,7 +68,6 @@ feature suggestions with impact/effort/confidence ratings.
 | ID | Status | Category | Suggestion | Current State → Improvement | Impact | Effort | Confidence |
 |----|--------|----------|-----------|------------------------------|--------|--------|------------|
 | FEAT-006 | Open | UX | **Terminal quick-keys row** | Input bar lacks Tab/Esc/Ctrl/arrows — essential for mobile terminals. Add a toggleable strip above the keyboard sending `\t`, ESC, arrow-key history recall from `_commandHistory`, and `\|`, `-`, `/` chips. Control chars need session semantics — document constraints. | High | Medium | 85% |
-| FEAT-007 | Open | Feature | **Run script / execute selection from Editor** | Editor can save but not execute. Add a "Run" action: `bash "<path>"` via executor with an inline output panel (reuse `TerminalOutput` model). Natural pairing with FEAT-003 (now shipped). | High | Low-Med | 90% |
 | FEAT-008 | 🔶 Partial | Quality | **Unit test suite for pure logic** | 5 test files now exist (`ShellUtilsTest`, `SecurityCommandBuilderTest`, `FileExplorerViewModelTest`, + QB additions `SearchUtilsTest`, `AISuggestionServiceTest`). Still untested: `parseLsOutput()` extraction from the explorer VM. | High | Low-Med | 100% |
 
 ---
@@ -102,7 +102,7 @@ feature suggestions with impact/effort/confidence ratings.
 ## Priority Reasoning
 
 - **Quick-win batches landed 2026-08-26**: QB-1 crash/correctness (NEW-001, NEW-002), QB-2 history integrity (FIX-006, FEAT-017), QB-3 History browser (FEAT-002), QB-4 Editor search (FEAT-003), QB-5 security hardening (FIX-003, NEW-004, FEAT-005), QB-6 release hygiene (FEAT-022 partial, FIX-008). All verified with `gradlew test assembleDebug`.
-- **Next natural targets**: FEAT-007 run-from-editor and FEAT-006 quick-keys row; FEAT-012's dedicated diagnostics screen. Foundation fixes (FIX/NEW) and FEAT-002/003/004/005/016/017 are all resolved as of 2026-08-26.
+- **Next natural targets**: FEAT-006 quick-keys row and FEAT-012's dedicated diagnostics screen; FEAT-009 snippets can now plug into both the terminal toolbar and the widget config picker. High-priority features FEAT-002/003/004/005/007 are resolved as of 2026-08-26.
 - **Security posture** improved materially; remaining risk concentrates in the still-broken diagnostics probe (FIX-004) masking a misconfigured Termux setup.
 - **Medium tier** grows the product (packages, processes, ANSI) but depends on NEW-003's structured-concurrency foundation.
 

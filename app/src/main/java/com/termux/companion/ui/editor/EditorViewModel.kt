@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.ui.navigation.EditorFile
+import com.termux.companion.ui.terminal.TerminalOutput
 import com.termux.companion.utils.SearchUtils
 import com.termux.companion.utils.ShellUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,10 @@ class EditorViewModel @Inject constructor(
         // base64 inflates size by 4/3, so cap the encoded payload well below it.
         private const val MAX_ENCODED_PAYLOAD_CHARS = 700_000
         private const val FILE_TIMEOUT_MS = 10_000L
+
+        // Scripts may legitimately run longer than single commands.
+        private const val RUN_TIMEOUT_MS = 30_000L
+        private const val MAX_OUTPUT_LINES = 400
     }
 
     private val _content = MutableStateFlow("")
@@ -65,6 +70,13 @@ class EditorViewModel @Inject constructor(
 
     private val _selectionRequest = MutableStateFlow<SelectionRequest?>(null)
     val selectionRequest: StateFlow<SelectionRequest?> = _selectionRequest.asStateFlow()
+
+    // FEAT-007: inline script runner
+    private val _isRunning = MutableStateFlow(false)
+    val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+
+    private val _scriptOutput = MutableStateFlow<List<TerminalOutput>>(emptyList())
+    val scriptOutput: StateFlow<List<TerminalOutput>> = _scriptOutput.asStateFlow()
 
     init {
         savedStateHandle.get<String>(EditorFile.ARG_FILE_PATH)?.takeIf { it.isNotBlank() }?.let {
@@ -135,24 +147,90 @@ class EditorViewModel @Inject constructor(
             // FIX-005: write via base64 pipe instead of a heredoc — immune to
             // content containing the old TC_EOF delimiter, and the encoded size is
             // checked against the Binder intent limit before dispatching.
-            val encoded = ShellUtils.encodeBase64Utf8(_content.value)
-            if (encoded.length > MAX_ENCODED_PAYLOAD_CHARS) {
-                _error.value = "File too large to save over IPC " +
-                    "(${encoded.length} encoded chars, limit $MAX_ENCODED_PAYLOAD_CHARS)"
-                return@launch
-            }
-
-            val result = termuxExecutor.execute(
-                command = "printf '%s' '$encoded' | base64 -d > ${ShellUtils.quote(path)}",
-                timeoutMs = FILE_TIMEOUT_MS
-            )
-            if (result.exitCode == 0) {
+            val result = writeContents(path, _content.value)
+            if (result.second == null) {
                 _originalContent.value = _content.value
                 _hasUnsavedChanges.value = false
                 _error.value = "File saved successfully"
             } else {
-                _error.value = "Failed to save: ${result.stderr.ifEmpty { result.stdout }}"
+                _error.value = "Failed to save: ${result.second}"
             }
+        }
+    }
+
+    /**
+     * Writes [content] to [path] via base64 transport. Returns (exitCode, errorText);
+     * errorText is null on success.
+     */
+    private suspend fun writeContents(path: String, content: String): Pair<Int, String?> {
+        val encoded = ShellUtils.encodeBase64Utf8(content)
+        if (encoded.length > MAX_ENCODED_PAYLOAD_CHARS) {
+            return -1 to "File too large to save over IPC " +
+                "(${encoded.length} encoded chars, limit $MAX_ENCODED_PAYLOAD_CHARS)"
+        }
+        val result = termuxExecutor.execute(
+            command = "printf '%s' '$encoded' | base64 -d > ${ShellUtils.quote(path)}",
+            timeoutMs = FILE_TIMEOUT_MS
+        )
+        if (result.exitCode == 0) return 0 to null
+        return result.exitCode to result.stderr.ifEmpty { result.stdout }.ifEmpty { "unknown error" }
+    }
+
+    /**
+     * FEAT-007: saves pending edits, then runs `bash <file>` with output streamed
+     * into the inline panel. Requires an open file path.
+     */
+    fun runScript() {
+        val path = _filePath.value
+        if (path.isEmpty()) {
+            _error.value = "Open a file before running"
+            return
+        }
+        if (_isRunning.value) return
+
+        viewModelScope.launch {
+            _isRunning.value = true
+            _scriptOutput.value = listOf(
+                TerminalOutput("$ bash ${path.substringAfterLast('/')}", isCommand = true)
+            )
+
+            if (_hasUnsavedChanges.value) {
+                appendScriptOutput("Auto-saving unsaved changes…")
+                val (saveCode, saveError) = writeContents(path, _content.value)
+                if (saveCode != 0) {
+                    appendScriptOutput("Save failed: $saveError", isError = true)
+                    _isRunning.value = false
+                    return@launch
+                }
+                _originalContent.value = _content.value
+                _hasUnsavedChanges.value = false
+            }
+
+            val result = termuxExecutor.execute(
+                command = "bash ${ShellUtils.quote(path)}",
+                timeoutMs = RUN_TIMEOUT_MS
+            )
+            result.stdout.lines()
+                .filter { it.isNotBlank() }
+                .takeLast(MAX_OUTPUT_LINES)
+                .forEach { line -> appendScriptOutput(line) }
+
+            appendScriptOutput(
+                "[Completed with exit code ${result.exitCode}]",
+                isError = result.exitCode != 0
+            )
+            _isRunning.value = false
+        }
+    }
+
+    private fun appendScriptOutput(text: String, isError: Boolean = false) {
+        _scriptOutput.value = _scriptOutput.value + TerminalOutput(text, isError = isError)
+    }
+
+    /** Clears the inline output panel; it re-appears on the next run. */
+    fun clearScriptOutput() {
+        if (!_isRunning.value) {
+            _scriptOutput.value = emptyList()
         }
     }
 

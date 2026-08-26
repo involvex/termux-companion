@@ -1,6 +1,7 @@
 package com.termux.companion.ui.editor
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,14 +10,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +55,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.termux.companion.ui.components.EmptyState
 import com.termux.companion.ui.components.ErrorState
 import com.termux.companion.ui.components.LoadingIndicator
+import com.termux.companion.ui.terminal.TerminalOutput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +68,8 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
     val error by viewModel.error.collectAsState()
     val searchState by viewModel.searchState.collectAsState()
     val selectionRequest by viewModel.selectionRequest.collectAsState()
+    val isRunning by viewModel.isRunning.collectAsState()
+    val scriptOutput by viewModel.scriptOutput.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showSearch by remember { mutableStateOf(false) }
     var textFieldValue by remember { mutableStateOf(TextFieldValue(content)) }
@@ -113,6 +121,25 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
                     }
                     IconButton(onClick = { viewModel.redo() }) {
                         Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                    }
+                    if (isRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        IconButton(
+                            onClick = viewModel::runScript,
+                            enabled = filePath.isNotEmpty()
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = "Run script",
+                                tint = if (filePath.isNotEmpty()) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                        }
                     }
                     IconButton(onClick = { showSearch = !showSearch }) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
@@ -221,8 +248,86 @@ fun EditorScreen(viewModel: EditorViewModel = hiltViewModel()) {
                                 }
                             )
                         }
+
+                        if (isRunning || scriptOutput.isNotEmpty()) {
+                            ScriptOutputPanel(
+                                lines = scriptOutput,
+                                isRunning = isRunning,
+                                onClose = viewModel::clearScriptOutput
+                            )
+                        }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScriptOutputPanel(
+    lines: List<TerminalOutput>,
+    isRunning: Boolean,
+    onClose: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(lines.size) {
+        if (lines.isNotEmpty()) scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isRunning) "Running…" else "Script output",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onClose, enabled = !isRunning) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close output",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        HorizontalDivider()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {
+            lines.forEach { line ->
+                Text(
+                    text = line.text,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = when {
+                            line.isError -> MaterialTheme.colorScheme.error
+                            line.isCommand -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onBackground
+                        }
+                    )
+                )
+            }
+            if (isRunning) {
+                Spacer(modifier = Modifier.height(4.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 1.5.dp
+                )
             }
         }
     }
