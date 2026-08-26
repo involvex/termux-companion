@@ -56,11 +56,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -68,6 +75,9 @@ import com.termux.companion.domain.model.AutocompleteSuggestion
 import com.termux.companion.domain.model.SuggestionIcon
 import com.termux.companion.domain.model.SuggestionSource
 import com.termux.companion.ui.components.ConnectionStatusBar
+import com.termux.companion.utils.AnsiParser
+
+private val TerminalFgColor = Color(0xFFE5E5E5L)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -304,17 +314,36 @@ private fun KeyCap(
 
 @Composable
 private fun TerminalOutputLine(line: TerminalOutput) {
-    val color = when {
+    val baseColor = when {
         line.isError -> MaterialTheme.colorScheme.error
         line.isCommand -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onBackground
+        else -> TerminalFgColor
     }
+
+    val styled = remember(line.text, line.spans, baseColor) {
+        buildAnnotatedString {
+            append(line.text)
+            line.spans.forEach { span ->
+                addStyle(
+                    SpanStyle(
+                        color = if (span.foregroundArgb == null) baseColor else Color(span.foregroundArgb),
+                        background = if (span.backgroundArgb == null) Color.Unspecified else Color(span.backgroundArgb),
+                        fontWeight = if (span.bold) FontWeight.Bold else null,
+                        fontStyle = if (span.italic) FontStyle.Italic else null
+                    ),
+                    span.start,
+                    span.endInclusive + 1
+                )
+            }
+        }
+    }
+
     Text(
-        text = line.text,
+        text = styled,
         style = TextStyle(
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
-            color = color
+            color = baseColor
         ),
         modifier = Modifier
             .fillMaxWidth()

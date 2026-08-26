@@ -1,5 +1,6 @@
 package com.termux.companion.ui.terminal
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.termux.companion.data.ai.AISuggestionService
@@ -11,6 +12,7 @@ import com.termux.companion.data.termux.TermuxCommandExecutor
 import com.termux.companion.domain.model.AutocompleteSuggestion
 import com.termux.companion.domain.model.SuggestionIcon
 import com.termux.companion.domain.model.SuggestionSource
+import com.termux.companion.utils.AnsiParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,7 +26,8 @@ import javax.inject.Inject
 data class TerminalOutput(
     val text: String,
     val isError: Boolean = false,
-    val isCommand: Boolean = false
+    val isCommand: Boolean = false,
+    val spans: List<AnsiSpan> = emptyList()
 )
 
 sealed class ConnectionState {
@@ -35,6 +38,7 @@ sealed class ConnectionState {
 }
 
 private const val TERMINAL_TIMEOUT_MS = 15_000L
+private val TERMINAL_DEFAULT_FG = Color(0xFFE5E5E5)
 
 @HiltViewModel
 class TerminalViewModel @Inject constructor(
@@ -207,7 +211,8 @@ class TerminalViewModel @Inject constructor(
     }
 
     private fun appendOutput(text: String, isError: Boolean = false, isCommand: Boolean = false) {
-        _outputLines.value = _outputLines.value + TerminalOutput(text, isError, isCommand)
+        val spans = AnsiParser.parse(text, TERMINAL_DEFAULT_FG)
+        _outputLines.value = _outputLines.value + TerminalOutput(text, isError, isCommand, spans)
     }
 
     fun clearTerminal() {
