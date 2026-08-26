@@ -1,6 +1,5 @@
 package com.termux.companion.data.termux
 
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -12,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +19,8 @@ import javax.inject.Singleton
 class TermuxCommandExecutor @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val nextId = AtomicLong(0)
+
     companion object {
         const val TERMUX_PACKAGE = "com.termux"
         const val RUN_COMMAND_SERVICE = "com.termux.app.RunCommandService"
@@ -28,16 +30,8 @@ class TermuxCommandExecutor @Inject constructor(
         const val EXTRA_WORKDIR = "com.termux.RUN_COMMAND_WORKDIR"
         const val EXTRA_BACKGROUND = "com.termux.RUN_COMMAND_BACKGROUND"
         const val EXTRA_SESSION_ACTION = "com.termux.RUN_COMMAND_SESSION_ACTION"
-        const val EXTRA_PENDING_INTENT = "com.termux.RUN_COMMAND_EXTRA_PENDING_INTENT"
 
         private const val TAG = "TermuxCmdExec"
-        private var nextId = 1
-        private val callbacks = mutableMapOf<Int, (String, String, Int) -> Unit>()
-
-        fun registerCallback(id: Int, cb: (String, String, Int) -> Unit) { callbacks[id] = cb }
-        fun deliverResult(id: Int, stdout: String, stderr: String, exitCode: Int) {
-            callbacks.remove(id)?.invoke(stdout, stderr, exitCode)
-        }
 
         fun getDownloadDir(): File {
             return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -65,10 +59,8 @@ class TermuxCommandExecutor @Inject constructor(
         workdir: String = "/data/data/com.termux/files/home",
         callback: (stdout: String, stderr: String, exitCode: Int) -> Unit
     ) {
-        val id = nextId++
-        registerCallback(id, callback)
+        val id = nextId.incrementAndGet()
 
-        // Also try PendingIntent as a faster path
         val downloadDir = getDownloadDir()
         downloadDir.mkdirs()
         val resultFile = File(downloadDir, "tc-out-$id.txt")
@@ -76,8 +68,7 @@ class TermuxCommandExecutor @Inject constructor(
 
         // Wrap command: write stdout+stderr to resultFile, exit code to doneFile
         val wrapped = "{ $command; } > \"${resultFile.absolutePath}\" 2>&1; echo \$? > \"${doneFile.absolutePath}\""
-        sendToTermuxWithPI(command, workdir, id) // try PI with original command
-        sendToTermux(wrapped, workdir)            // actual: file-based via wrapped command
+        sendToTermux(wrapped, workdir)
 
         Log.d(TAG, "Command #$id wrapped to: $wrapped")
         Log.d(TAG, "Polling for: ${resultFile.absolutePath}")
@@ -97,7 +88,6 @@ class TermuxCommandExecutor @Inject constructor(
                             doneFile.delete()
                             Log.d(TAG, "Got result for #$id: ${stdout.take(80)}")
                             withContext(Dispatchers.Main) { callback(stdout, "", exitCode) }
-                            callbacks.remove(id)
                             return@withContext
                         }
                     }
@@ -114,35 +104,11 @@ class TermuxCommandExecutor @Inject constructor(
             withContext(Dispatchers.Main) {
                 callback("", "Timeout: no result from Termux after 10s.\n\n$hint", -1)
             }
-            callbacks.remove(id)
         }
     }
 
     fun executeCommandNoResult(command: String, workdir: String = "/data/data/com.termux/files/home") {
         sendToTermux(command, workdir)
-    }
-
-    private fun sendToTermuxWithPI(command: String, workdir: String, id: Int) {
-        try {
-            val resultIntent = Intent(TermuxResultReceiver.ACTION_TERMUX_RESULT).apply {
-                setPackage(context.packageName)
-                putExtra("execution_id", id)
-            }
-            val pi = PendingIntent.getBroadcast(context, id, resultIntent,
-                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_MUTABLE)
-            val intent = Intent().apply {
-                setClassName(TERMUX_PACKAGE, RUN_COMMAND_SERVICE)
-                setAction(ACTION_RUN_COMMAND)
-                putExtra(EXTRA_COMMAND_PATH, "/data/data/com.termux/files/usr/bin/bash")
-                putExtra(EXTRA_ARGUMENTS, arrayOf("-c", command))
-                putExtra(EXTRA_WORKDIR, workdir)
-                putExtra(EXTRA_BACKGROUND, true)
-                putExtra(EXTRA_SESSION_ACTION, "0")
-                putExtra(EXTRA_PENDING_INTENT, pi)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
-            else context.startService(intent)
-        } catch (e: Exception) { Log.w(TAG, "PI send failed: ${e.message}") }
     }
 
     private fun sendToTermux(command: String, workdir: String) {

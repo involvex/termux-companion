@@ -2,7 +2,6 @@ package com.termux.companion
 
 import android.app.Application
 import com.termux.companion.data.termux.TermuxCommandExecutor
-import com.termux.companion.data.termux.TermuxResultReceiver
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -19,7 +18,6 @@ class TermuxCompanionApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        TermuxResultReceiver.register(this)
     }
 }
 
